@@ -1,0 +1,2 @@
+# Google GenAI SDK for Gemini Pro integration
+google-genai>=1.0.0

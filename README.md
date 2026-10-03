@@ -58,7 +58,16 @@ chmod +x ./scripts/run_daily_wisdom.sh
 ./scripts/run_daily_wisdom.sh
 ```
 
-### 2. Local Unit Testing & Validation Hooks
+### 2. Live Gemini Pro Architecture Generation
+The engine is powered by Google Gemini Pro (`gemini-2.5-pro` / `gemini-1.5-pro`). To generate live architectures:
+- **In GitHub Actions**: Add `GEMINI_API_KEY` to your repository's GitHub Secrets (**Settings $\to$ Secrets and variables $\to$ Actions $\to$ New repository secret**). The daily cron workflow ([daily_dispatch.yml](.github/workflows/daily_dispatch.yml)) will automatically generate, commit, and push new dispatches every day at 09:00 AM IST.
+- **Locally**: Set the environment variable before executing:
+  ```bash
+  export GEMINI_API_KEY="your-gemini-api-key"
+  ./scripts/run_daily_wisdom.sh
+  ```
+
+### 3. Local Unit Testing & Validation Hooks
 Every generated code asset features automated validation unit tests built directly into the file. To verify local execution parameters manually on your terminal workspace, run:
 
 ```bash

@@ -5,23 +5,48 @@ on:
     # Triggers dynamically every single calendar day at 03:30 UTC / 09:00 AM IST
     - cron: '30 3 * * *'
   workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
+    inputs:
+      model:
+        description: "Gemini Model to execute generation"
+        required: false
+        default: "gemini-2.5-pro"
+        type: choice
+        options:
+          - "gemini-2.5-pro"
+          - "gemini-1.5-pro"
+          - "gemini-2.0-flash"
 
 jobs:
   execute-architecture-generation:
+    name: Generate & Sync Daily Architecture Blueprint
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-    - name: Checkout Operational Infrastructure Codebase
+    - name: Checkout Codebase
       uses: actions/checkout@v4
 
-    - name: Run Orchestration Bootstrap Script
+    - name: Set up Python Runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Execute Daily Wisdom Generator via Gemini Pro
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GEMINI_MODEL: ${{ inputs.model || 'gemini-2.5-pro' }}
       run: |
         chmod +x ./scripts/run_daily_wisdom.sh
         ./scripts/run_daily_wisdom.sh
 
-    - name: Commit and Push Newly Generated Structural Blueprint File
+    - name: Commit and Push Generated Blueprint to Repository
       run: |
         git config --global user.name "Amitkumar_Tiwari"
         git config --global user.email "69420529+Amit1092tiwari@users.noreply.github.com"
