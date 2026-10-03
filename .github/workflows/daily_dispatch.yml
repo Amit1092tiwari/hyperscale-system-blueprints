@@ -1,0 +1,31 @@
+name: Continuous Technical Wisdom Synchronization
+
+on:
+  schedule:
+    # Triggers dynamically every single calendar day at 03:30 UTC / 09:00 AM IST
+    - cron: '30 3 * * *'
+  workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
+
+jobs:
+  execute-architecture-generation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout Operational Infrastructure Codebase
+      uses: actions/checkout@v4
+
+    - name: Run Orchestration Bootstrap Script
+      run: |
+        chmod +x ./scripts/run_daily_wisdom.sh
+        ./scripts/run_daily_wisdom.sh
+
+    - name: Commit and Push Newly Generated Structural Blueprint File
+      run: |
+        git config --global user.name "Amitkumar_Tiwari"
+        git config --global user.email "69420529+Amit1092tiwari@users.noreply.github.com"
+        git add dispatches/
+        # Check for modifications to avoid throwing non-zero exit codes if nothing changed
+        git diff-index --quiet HEAD || git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d')"
+        git push
