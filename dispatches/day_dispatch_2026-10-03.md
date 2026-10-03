@@ -9,27 +9,14 @@
 
 ## 1. System Parameters
 
-• Target Domain: Pillar C: Enterprise Data Systems & Lakehouses (Massively Parallel Stream Ingestion & Metadata Pruning)
-• Framework Used: Apache Iceberg v2 REST Catalog with Arrow Flight SQL streaming buffers
-• Technology Stack: Apache Iceberg, Apache Arrow, DuckDB Local Engine, PyIceberg Client
-• Scale Bottleneck: High-frequency commit contention and small-file explosion during microsecond streaming writes
-• API/Serialization Protocol: Arrow Flight RPC / Iceberg REST Catalog Protocol
-• Data Lineage Component: OpenLineage RunEvents tracking manifest file splits and snapshot compaction lifecycles
-• Components Used: Arrow Memory Allocator, Iceberg Streaming Writer, Local Catalog Mock Harness
-• Concepts Involved: Copy-on-Write vs Merge-on-Read, Manifest pruning, Vectorized dictionary decoding, Lock-free commit retries
-
-### 📋 Architectural Specification Matrix
-
-| Dimension | Production Specification |
-| :--- | :--- |
-| **🎯 Target Domain** | `Pillar C: Enterprise Data Systems & Lakehouses (Massively Parallel Stream Ingestion & Metadata Pruning)` |
-| **⚙️ Framework Used** | `Apache Iceberg v2 REST Catalog with Arrow Flight SQL streaming buffers` |
-| **📦 Technology Stack** | `Apache Iceberg, Apache Arrow, DuckDB Local Engine, PyIceberg Client` |
-| **⚠️ Scale Bottleneck** | High-frequency commit contention and small-file explosion during microsecond streaming writes |
-| **🔌 Protocol / Bus** | `Arrow Flight RPC / Iceberg REST Catalog Protocol` |
-| **📜 Data Lineage** | `OpenLineage RunEvents tracking manifest file splits and snapshot compaction lifecycles` |
-| **🧩 Components Used** | `Arrow Memory Allocator, Iceberg Streaming Writer, Local Catalog Mock Harness` |
-| **💡 Core Concepts** | `Copy-on-Write vs Merge-on-Read, Manifest pruning, Vectorized dictionary decoding, Lock-free commit retries` |
+- **Target Domain:** Pillar C: Enterprise Data Systems & Lakehouses (Massively Parallel Stream Ingestion & Metadata Pruning)
+- **Framework Used:** Apache Iceberg v2 REST Catalog with Arrow Flight SQL streaming buffers
+- **Technology Stack:** Apache Iceberg, Apache Arrow, DuckDB Local Engine, PyIceberg Client
+- **Scale Bottleneck:** High-frequency commit contention and small-file explosion during microsecond streaming writes
+- **API/Serialization Protocol:** Arrow Flight RPC / Iceberg REST Catalog Protocol
+- **Data Lineage Component:** OpenLineage RunEvents tracking manifest file splits and snapshot compaction lifecycles
+- **Components Used:** Arrow Memory Allocator, Iceberg Streaming Writer, Local Catalog Mock Harness
+- **Concepts Involved:** Copy-on-Write vs Merge-on-Read, Manifest pruning, Vectorized dictionary decoding, Lock-free commit retries
 
 ---
 

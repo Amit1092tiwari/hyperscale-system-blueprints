@@ -1,7 +1,8 @@
 # hyperscale-system-blueprints
 
-[![Continuous Technical Wisdom Synchronization](https://github.com)](https://github.com)
-[![Production Data Pipeline CI Verification](https://github.com)](https://github.com)
+[![Production Data Pipeline CI Verification](https://github.com/Amit1092tiwari/hyperscale-system-blueprints/actions/workflows/ci.yml/badge.svg)](https://github.com/Amit1092tiwari/hyperscale-system-blueprints/actions/workflows/ci.yml)
+[![Continuous Technical Wisdom Synchronization](https://github.com/Amit1092tiwari/hyperscale-system-blueprints/actions/workflows/daily_dispatch.yml/badge.svg)](https://github.com/Amit1092tiwari/hyperscale-system-blueprints/actions/workflows/daily_dispatch.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 An enterprise-grade, code-first blueprint repository delivering high-density system architecture specifications, low-level execution components, and automated verification matrices. This platform acts as an uncompromised technical co-pilot tailored for Senior Engineers optimizing platforms for hyperscale loads, low latency, and strict zero-trust regulation.
 
@@ -33,7 +34,9 @@ The platform enforces a strict, machine-readable repository layout to maintain t
 │       └── ci.yml                 <── Automated CI Verification Runner
 ├── dispatches/                    <── Storage Target for High-Density Blueprints (*.md)
 ├── scripts/
+│   ├── generate_dispatch.py       <── Gemini Pro Architecture Dispatch Engine
 │   └── run_daily_wisdom.sh        <── Local Bootstrap Orchestrator
+├── requirements.txt               <── Python Dependencies (google-genai)
 └── README.md                      <── Global Core Matrix Documentation
 ```
 
@@ -89,4 +92,4 @@ All infrastructure profiles require continuous validation across four primary pl
 
 ## ⚖️ License
 
-This repository is purely open-source and distributed under the terms of the **Apache License 2.0**.
+This repository is purely open-source and distributed under the terms of the [Apache License 2.0](LICENSE).

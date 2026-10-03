@@ -88,7 +88,15 @@ Your mission is to deliver daily, ultra-high-density technical wisdom tailored f
 CRITICAL INSTRUCTION: MAKE THE OUTPUT VISUALLY STUNNING AND AESTHETICALLY POLISHED!
 Utilize GitHub-Flavored Markdown best practices:
 1. Sleek Header with Badges: Include shield badges for the Pillar, Framework, Security Level, and Local-First CI Status.
-2. Structured Specification Matrix Table: Present "1. System Parameters" as a clean, formatted Markdown table with bold category icons (e.g. 🎯 Target Domain, ⚙️ Framework Used, 📦 Technology Stack, ⚠️ Scale Bottleneck, 🔌 Protocol, 📜 Data Lineage, 🧩 Components Used, 💡 Concepts Involved) in addition to the bullet points.
+2. Clean System Parameters: Present "## 1. System Parameters" as a clean, standard Markdown bulleted list with bold keys (no duplicate tables):
+   - **Target Domain:** ...
+   - **Framework Used:** ...
+   - **Technology Stack:** ...
+   - **Scale Bottleneck:** ...
+   - **API/Serialization Protocol:** ...
+   - **Data Lineage Component:** ...
+   - **Components Used:** ...
+   - **Concepts Involved:** ...
 3. GitHub-Flavored Alerts: Use `> [!WARNING]` to highlight technical bottlenecks in Problem Statement, `> [!TIP]` for Nature Analogy takeaways, and `> [!IMPORTANT]` for production operational rules.
 4. Dual Diagrams (ASCII + Native Mermaid): For HLD, LLD, and Logical Flow, provide BOTH crisp, beautiful ASCII diagrams AND native GitHub Mermaid.js rendered diagrams (```mermaid ... ```).
 5. Rich KPI & Failure Tables: Use severity badges (🔴 Critical, 🟡 High, 🟠 Medium) and structured telemetry matrices.
@@ -97,21 +105,19 @@ Utilize GitHub-Flavored Markdown best practices:
 YOU MUST GENERATE THE OUTPUT STRICTLY ADHERING TO THE FOLLOWING 10-SECTION ORDER:
 
 ---
-Day {series_day} Dispatch: {seed['title']}
+# ⚡ Day {series_day} Dispatch: {seed['title']}
 
-1. System Parameters
-• Target Domain: {seed['domain']}
-• Framework Used: {seed['framework']}
-• Technology Stack: {seed['tech_stack']}
-• Scale Bottleneck: {seed['bottleneck']}
-• API/Serialization Protocol: {seed['protocol']}
-• Data Lineage Component: {seed['lineage']}
-• Components Used: {seed['components']}
-• Concepts Involved: {seed['concepts']}
+## 1. System Parameters
+- **Target Domain:** {seed['domain']}
+- **Framework Used:** {seed['framework']}
+- **Technology Stack:** {seed['tech_stack']}
+- **Scale Bottleneck:** {seed['bottleneck']}
+- **API/Serialization Protocol:** {seed['protocol']}
+- **Data Lineage Component:** {seed['lineage']}
+- **Components Used:** {seed['components']}
+- **Concepts Involved:** {seed['concepts']}
 
-[Also include a clean, visually polished 2-column Markdown specification matrix table summarizing these dimensions with icons]
-
-2. Problem Statement
+## 2. Problem Statement
 [Include a `> [!WARNING]` callout box highlighting the core constraint, followed by 2-3 dense paragraphs detailing the exact physical memory/CPU/network bounds and why standard CI runners fail without proper sharding.]
 
 3. High-Level Design (HLD)
@@ -226,27 +232,14 @@ def generate_mock_dispatch(series_day: int, seed: dict) -> str:
 
 ## 1. System Parameters
 
-• Target Domain: {seed['domain']}
-• Framework Used: {seed['framework']}
-• Technology Stack: {seed['tech_stack']}
-• Scale Bottleneck: {seed['bottleneck']}
-• API/Serialization Protocol: {seed['protocol']}
-• Data Lineage Component: {seed['lineage']}
-• Components Used: {seed['components']}
-• Concepts Involved: {seed['concepts']}
-
-### 📋 Architectural Specification Matrix
-
-| Dimension | Production Specification |
-| :--- | :--- |
-| **🎯 Target Domain** | `{seed['domain']}` |
-| **⚙️ Framework Used** | `{seed['framework']}` |
-| **📦 Technology Stack** | `{seed['tech_stack']}` |
-| **⚠️ Scale Bottleneck** | {seed['bottleneck']} |
-| **🔌 Protocol / Bus** | `{seed['protocol']}` |
-| **📜 Data Lineage** | `{seed['lineage']}` |
-| **🧩 Components Used** | `{seed['components']}` |
-| **💡 Core Concepts** | `{seed['concepts']}` |
+- **Target Domain:** {seed['domain']}
+- **Framework Used:** {seed['framework']}
+- **Technology Stack:** {seed['tech_stack']}
+- **Scale Bottleneck:** {seed['bottleneck']}
+- **API/Serialization Protocol:** {seed['protocol']}
+- **Data Lineage Component:** {seed['lineage']}
+- **Components Used:** {seed['components']}
+- **Concepts Involved:** {seed['concepts']}
 
 ---
 
