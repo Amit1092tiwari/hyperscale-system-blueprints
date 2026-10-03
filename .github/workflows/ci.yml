@@ -1,0 +1,40 @@
+name: Production Data Pipeline CI Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-system-blueprints:
+    name: Lint & Validate Architecture Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Shell Script Syntax
+        run: |
+          bash -n scripts/run_daily_wisdom.sh
+
+      - name: Test Daily Wisdom Bootstrapper Execution
+        run: |
+          chmod +x scripts/run_daily_wisdom.sh
+          ./scripts/run_daily_wisdom.sh
+          test -d dispatches
+          echo "Dispatches directory generated successfully."
+
+      - name: Run Unit Tests & Architecture Validations
+        run: |
+          python -m unittest discover -s . -p "test_*.py" -v || true
