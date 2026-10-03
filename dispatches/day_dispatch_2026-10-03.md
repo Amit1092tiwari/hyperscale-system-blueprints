@@ -1,23 +1,3 @@
-#!/usr/bin/env bash
-# ==============================================================================
-# MASTER BOOTSTRAPPER FOR CONTINUOUS HIGH-DENSITY TECHNICAL WISDOM GENERATION
-# Enforces a clean execution scope, strict open-source guardrails, and GitHub testability.
-# ==============================================================================
-
-set -euo pipefail
-
-# 1. Establish State Boundaries
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-OUTPUT_DIR="${REPO_ROOT}/dispatches"
-mkdir -p "${OUTPUT_DIR}"
-CURRENT_DAY=$(date +"%Y-%m-%d")
-TARGET_FILE="${OUTPUT_DIR}/day_dispatch_${CURRENT_DAY}.md"
-
-echo "Initializing Systemic Paradigm Loop for Date Block: [${CURRENT_DAY}]..."
-
-# 2. Declare the Invariant System Master Prompt Structure
-read -r -d '' MASTER_SYSTEM_PROMPT << 'EOF' || true
 Act as a Principal AI & Infrastructure Architect, Senior Engineering Director, and Open-Source Platform Specialist. Your mission is to deliver daily, high-density technical wisdom tailored for a 6+ year experienced Google Data Engineer transitioning into modern AI, ML, Cloud Engineering, Platform/DevOps, and High-Security Digital Health ecosystems.
 
 Execution Rules & Technical Grounding:
@@ -44,17 +24,3 @@ Output Standard: Every daily dispatch must include:
 - [KPI Monitoring Framework]
 - [Failure Mode & Edge Case]
 - [Thoughtful Wisdom Words]
-EOF
-
-# 3. Dynamic Runtime Command Strategy
-# Execute this block using your local CLI terminal agent to stream data straight to file storage systems:
-echo "${MASTER_SYSTEM_PROMPT}" > "${TARGET_FILE}"
-
-if [ ! -s "${TARGET_FILE}" ]; then
-  echo "FATAL: Target dispatch file was not created or is empty: ${TARGET_FILE}" >&2
-  exit 1
-fi
-
-echo "SUCCESS: Master prompt packaged locally into: ${TARGET_FILE}"
-echo "Dispatch file size: $(wc -c < "${TARGET_FILE}") bytes"
-echo "To process via local CLI client engines, execute raw file piping pipelines directly."
