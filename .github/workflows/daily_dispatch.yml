@@ -2,8 +2,8 @@ name: Continuous Technical Wisdom Synchronization
 
 on:
   schedule:
-    # Testing mode: triggers every 5 minutes automatically
-    - cron: '*/5 * * * *'
+    # Testing mode: triggers every 15 minutes automatically
+    - cron: '*/15 * * * *'
     # Production schedule (commented for testing):
     # - cron: '35 3 * * *'
   workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
