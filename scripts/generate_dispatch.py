@@ -589,7 +589,7 @@ def main():
     series_day = get_next_series_day()
     seed = random.choice(PILLARS)
 
-    current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-H-%M-%S")
     target_filename = f"day_dispatch_{current_date}.md"
     target_filepath = DISPATCHES_DIR / target_filename
 

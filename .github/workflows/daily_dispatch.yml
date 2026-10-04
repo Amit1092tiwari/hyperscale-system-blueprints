@@ -2,8 +2,10 @@ name: Continuous Technical Wisdom Synchronization
 
 on:
   schedule:
-    # Triggers dynamically every single calendar day at 03:30 UTC / 09:00 AM IST
-    - cron: '30 3 * * *'
+    # Triggers dynamically every single calendar day at 03:35 UTC / 09:05 AM IST
+    # (Off-peak minute :35 avoids high platform queue delays and drops at :00 and :30)
+    #- cron: '35 3 * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
     inputs:
       model:
@@ -26,6 +28,8 @@ jobs:
     steps:
     - name: Checkout Codebase
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up Python Runtime
       uses: actions/setup-python@v5
@@ -52,5 +56,10 @@ jobs:
         git config --global user.email "69420529+Amit1092tiwari@users.noreply.github.com"
         git add dispatches/
         # Check for modifications to avoid throwing non-zero exit codes if nothing changed
-        git diff-index --quiet HEAD || git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d')"
-        git push
+        if ! git diff-index --quiet HEAD; then
+          git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d')"
+          git pull --rebase origin main || true
+          git push origin main
+        else
+          echo "No blueprint updates detected. Skipping push."
+        fi
