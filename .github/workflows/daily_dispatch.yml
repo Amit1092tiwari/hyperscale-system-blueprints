@@ -2,9 +2,10 @@ name: Continuous Technical Wisdom Synchronization
 
 on:
   schedule:
-    # Triggers dynamically every single calendar day at 03:35 UTC / 09:05 AM IST
-    # (Off-peak minute :35 avoids high platform queue delays and drops at :00 and :30)
-    - cron: '35 3 * * *'
+    # Testing mode: triggers every 5 minutes automatically
+    - cron: '*/5 * * * *'
+    # Production schedule (commented for testing):
+    # - cron: '35 3 * * *'
   workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
     inputs:
       model:
@@ -56,7 +57,7 @@ jobs:
         git add dispatches/
         # Check for modifications to avoid throwing non-zero exit codes if nothing changed
         if ! git diff-index --quiet HEAD; then
-          git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d')"
+          git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d %H:%M:%S UTC')"
           git pull --rebase origin main || true
           git push origin main
         else

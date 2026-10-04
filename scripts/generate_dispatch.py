@@ -79,27 +79,12 @@ PILLARS = [
 ]
 
 def get_series_day(current_date: str) -> int:
-    """Calculate the sequential series day number.
-    If a dispatch already exists for today's date, preserve its series day.
-    Otherwise, return max(existing_days) + 1.
-    """
+    """Calculate the sequential series day number based on existing dispatches."""
     DISPATCHES_DIR.mkdir(parents=True, exist_ok=True)
-    today_file = DISPATCHES_DIR / f"day_dispatch_{current_date}.md"
+    max_day = 0
     pattern = re.compile(r"#\s*⚡\s*Day\s*(\d+)\s*Dispatch", re.IGNORECASE)
     
-    if today_file.exists():
-        try:
-            content = today_file.read_text(encoding="utf-8", errors="ignore")
-            match = pattern.search(content)
-            if match:
-                return int(match.group(1))
-        except Exception:
-            pass
-
-    max_day = 0
     for dispatch_file in DISPATCHES_DIR.glob("day_dispatch_*.md"):
-        if dispatch_file == today_file:
-            continue
         try:
             content = dispatch_file.read_text(encoding="utf-8", errors="ignore")
             match = pattern.search(content)
@@ -108,11 +93,7 @@ def get_series_day(current_date: str) -> int:
         except Exception:
             pass
 
-    if max_day > 0:
-        return max_day + 1
-    
-    other_files = [f for f in DISPATCHES_DIR.glob("day_dispatch_*.md") if f != today_file]
-    return max(len(other_files) + 1, 1)
+    return max(max_day + 1, 1)
 
 def build_system_prompt(series_day: int, seed: dict) -> str:
     """Construct the visually enhanced masterclass generation prompt."""
