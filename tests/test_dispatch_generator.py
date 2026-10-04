@@ -59,5 +59,38 @@ class TestDispatchGenerator(unittest.TestCase):
         self.assertEqual(len(generated_titles), 4)
         self.assertEqual(len(generated_domains), 4)
 
+    def test_dispatch_uniqueness_across_extended_catalog(self):
+        """Verify that sequential calls without explicit seed yield strictly unique blueprints."""
+        history = []
+        titles = set()
+        domains = set()
+
+        for day in range(1, 9):
+            content = gd.generate_mock_dispatch(day, seed=None, past_dispatches=history)
+            
+            # Extract title and domain from content
+            lines = content.splitlines()
+            title_line = lines[0] if lines else ""
+            self.assertIn(f"Dispatch #{day}:", title_line)
+            
+            # Check uniqueness against history
+            is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(content, history)
+            self.assertTrue(is_unique, f"Day {day} failed uniqueness check: {reason}")
+            
+            # Track history for subsequent days
+            meta = {
+                "day_number": day,
+                "title": title_line.split(":", 1)[1].strip() if ":" in title_line else title_line,
+                "domain": "test",
+                "framework": "test",
+                "tokens": gd.uniqueness.extract_tokens(content),
+                "filename": f"test_day_{day}.md"
+            }
+            history.append(meta)
+            titles.add(meta["title"])
+
+        self.assertEqual(len(titles), 8)
+
 if __name__ == '__main__':
     unittest.main()
+
