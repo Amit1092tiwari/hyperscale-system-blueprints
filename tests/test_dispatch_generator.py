@@ -35,7 +35,7 @@ class TestDispatchGenerator(unittest.TestCase):
             self.assertGreater(len(content), 10000, f"Pillar {seed['pillar_id']} too short")
             
             # Assert mandatory 10 sections exist
-            self.assertIn(f"# ⚡ Day {day} Dispatch:", content)
+            self.assertIn(f"Dispatch #{day}:", content)
             self.assertIn("## 1. System Parameters", content)
             self.assertIn("## 2. Problem Statement", content)
             self.assertIn("## 3. High-Level Design (HLD)", content)

@@ -82,21 +82,24 @@ def get_series_day(current_date: str = "") -> int:
     """Calculate the sequential series day number based on existing dispatches."""
     DISPATCHES_DIR.mkdir(parents=True, exist_ok=True)
     max_day = 0
-    pattern = re.compile(r"#\s*⚡\s*Day\s*(\d+)\s*Dispatch", re.IGNORECASE)
+    pattern = re.compile(r"#\s*⚡.*?(?:Day\s*(\d+)|Dispatch\s*#?(\d+))", re.IGNORECASE)
     
     for dispatch_file in DISPATCHES_DIR.glob("day_dispatch_*.md"):
         try:
             content = dispatch_file.read_text(encoding="utf-8", errors="ignore")
             match = pattern.search(content)
             if match:
-                max_day = max(max_day, int(match.group(1)))
+                num = int(match.group(1) or match.group(2))
+                max_day = max(max_day, num)
         except Exception:
             pass
 
     return max(max_day + 1, 1)
 
-def build_system_prompt(series_day: int, seed: dict) -> str:
+def build_system_prompt(series_day: int, seed: dict, current_date: str = "") -> str:
     """Construct the visually enhanced masterclass generation prompt."""
+    if not current_date:
+        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     return f"""Act as a World-Class Principal AI & Hyperscale Infrastructure Architect, Senior Engineering Director, and Open-Source Platform Specialist.
 Your mission is to deliver daily, ultra-high-density technical wisdom tailored for a Senior/Principal Cloud Data & AI Systems Engineer (8+ years experience).
 
@@ -120,7 +123,7 @@ Utilize GitHub-Flavored Markdown best practices:
 YOU MUST GENERATE THE OUTPUT STRICTLY ADHERING TO THE FOLLOWING 10-SECTION ORDER:
 
 ---
-# ⚡ Day {series_day} Dispatch: {seed['title']}
+# ⚡ {current_date} - Dispatch #{series_day}: {seed['title']}
 
 ## 1. System Parameters
 - **Target Domain:** {seed['domain']}
@@ -1533,9 +1536,11 @@ if __name__ == '__main__':
 > — **Principal Systems Architect Maxim**
 """
 
-def generate_header(series_day: int, seed: dict) -> str:
+def generate_header(series_day: int, seed: dict, current_date: str = "") -> str:
     """Build Section 1 and header badges with dynamic seed metadata."""
-    return f"""# ⚡ Day {series_day} Dispatch: {seed['title']}
+    if not current_date:
+        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    return f"""# ⚡ {current_date} - Dispatch #{series_day}: {seed['title']}
 
 [![Pillar](https://img.shields.io/badge/Pillar-{seed['badge_name']}-{seed['badge_color']}?style=for-the-badge)]()
 [![Validation](https://img.shields.io/badge/Validation-Local--First%20CI%20Verified-emerald?style=for-the-badge&logo=githubactions)]()
@@ -1558,9 +1563,11 @@ def generate_header(series_day: int, seed: dict) -> str:
 ---
 """
 
-def generate_mock_dispatch(series_day: int, seed: dict) -> str:
+def generate_mock_dispatch(series_day: int, seed: dict, current_date: str = "") -> str:
     """Dispatches to the dedicated high-density pillar blueprint generator."""
-    header = generate_header(series_day, seed)
+    if not current_date:
+        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    header = generate_header(series_day, seed, current_date)
     pillar_id = seed.get("pillar_id", "A")
     if pillar_id == "A":
         return header + BODY_PILLAR_A
@@ -1647,6 +1654,7 @@ def main():
     print("=" * 80)
 
     # 1. Determine Sequential Day & Deterministic Pillar Rotation
+    current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     current_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
     series_day = get_series_day()
     pillar_idx = (series_day - 1) % len(PILLARS)
@@ -1661,7 +1669,7 @@ def main():
     print(f"Framework: {seed['framework']}")
 
     # 2. Build Generation Prompt
-    prompt = build_system_prompt(series_day, seed)
+    prompt = build_system_prompt(series_day, seed, current_date)
 
     # 3. Model & Auth Resolution
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -1685,7 +1693,7 @@ def main():
                 print("[SUCCESS] Content generated via Gemini REST API.")
             except Exception as e:
                 print(f"[WARNING] REST API generation encountered: {e}. Falling back to deterministic pillar engine...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed)
+                generated_content = generate_mock_dispatch(series_day, seed, current_date)
         except Exception as e:
             print(f"[WARNING] SDK generation encountered: {e}. Trying direct REST API...", file=sys.stderr)
             try:
@@ -1693,12 +1701,12 @@ def main():
                 print("[SUCCESS] Content generated via Gemini REST API.")
             except Exception as inner_e:
                 print(f"[WARNING] REST API generation encountered: {inner_e}. Falling back to deterministic pillar engine...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed)
+                generated_content = generate_mock_dispatch(series_day, seed, current_date)
     else:
         print("\n[NOTICE] GEMINI_API_KEY environment variable is NOT set.")
         print("[NOTICE] Operating in resilient DRY-RUN / Deterministic high-density architectural blueprint mode.")
         print("[NOTICE] (To enable live Gemini generation, configure GEMINI_API_KEY in repository secrets).")
-        generated_content = generate_mock_dispatch(series_day, seed)
+        generated_content = generate_mock_dispatch(series_day, seed, current_date)
 
     # 4. Write and Verify File
     DISPATCHES_DIR.mkdir(parents=True, exist_ok=True)
