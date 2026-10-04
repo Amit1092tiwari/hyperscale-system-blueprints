@@ -1,6 +1,6 @@
-# ⚡ Day 2 Dispatch: Local-First Open-Source High-Throughput Distributed Tensor Sharding
+# ⚡ Day 1 Dispatch: Local-First Open-Source High-Throughput Distributed Tensor Sharding
 
-[![Pillar](https://img.shields.io/badge/Pillar-Distributed%20AI%20%26%20ML-blue?style=for-the-badge&logo=apache)]()
+[![Pillar](https://img.shields.io/badge/Pillar-Distributed%20AI%20%26%20ML-blue?style=for-the-badge)]()
 [![Validation](https://img.shields.io/badge/Validation-Local--First%20CI%20Verified-emerald?style=for-the-badge&logo=githubactions)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Zero--Cost%20Mock%20Harness-blueviolet?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)]()
@@ -157,12 +157,12 @@ sequenceDiagram
 flowchart TD
     Start(["📥 Raw Array Inputs"]) --> Init["⚡ Process Group Initialization (Gloo)"]
     Init --> Split["✂️ Split Model Parameters Across Host Pages"]
-    Split --> MemoryCheck🔍 Verify Allocation Ceiling < 2GB?
+    Split --> MemoryCheck{"🔍 Verify Allocation Ceiling < 2GB?"}
     
     MemoryCheck -- "YES (Within Budget)" --> Forward["🚀 Execute Layer Forward Pass"]
     MemoryCheck -- "NO (Ceiling Exceeded)" --> OOMGuard["🛑 Abort Instantly via OOM Guard Hook"]
     
-    Forward --> GradCheckGrad Synchronization Verified?
+    Forward --> GradCheck{"Grad Synchronization Verified?"}
     GradCheck -- "Verified" --> Emit["📜 Emit OpenLineage Schema Record"]
     GradCheck -- "Failed" --> Retry["🔁 Trigger Backoff & Log Diagnostic"]
     
@@ -243,7 +243,6 @@ import torch.multiprocessing as mp
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import CPUOffload, ShardingStrategy
 
-# Build a Mock Transformer Block Layer for localized testing
 class MockTransformerBlock(nn.Module):
     def __init__(self):
         super().__init__()
@@ -255,31 +254,20 @@ class MockTransformerBlock(nn.Module):
         return self.linear2(self.activation(self.linear1(x)))
 
 def run_distributed_mock_rank(rank, world_size, result_queue):
-    """Executes local FSDP sharding routines over process loops with CPU offloading."""
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29505'
-    
-    # Initialize open-source local Gloo communication backend for CPU-only environments
     dist.init_process_group("gloo", rank=rank, world_size=world_size)
-    
     model = MockTransformerBlock()
-    
-    # Configure strict CPU offloading to protect execution boundaries inside testing VMs
     fsdp_model = FSDP(
         model,
         sharding_strategy=ShardingStrategy.FULL_SHARD,
         cpu_offload=CPUOffload(offload_to_cpu=True)
     )
-    
-    # Generate mock inputs matching explicit batch configurations
     mock_input = torch.randn(4, 128)
-    
     try:
         output = fsdp_model(mock_input)
         loss = output.sum()
         loss.backward()
-        
-        # Verify gradients exist on sharded blocks
         grad_verified = next(fsdp_model.parameters()).grad is not None
         result_queue.put((rank, True, grad_verified))
     except Exception as e:
@@ -289,27 +277,20 @@ def run_distributed_mock_rank(rank, world_size, result_queue):
 
 class TestTensorShardingPlatform(unittest.TestCase):
     def test_local_fsdp_sharding_lifecycle(self):
-        """Verifies that the sharding pipeline executes successfully across multi-process loops."""
         world_size = 2
         result_queue = mp.Queue()
-        
-        # Spawn multi-process ranks locally to simulate multi-node cluster topologies
         processes = []
         for rank in range(world_size):
             p = mp.Process(target=run_distributed_mock_rank, args=(rank, world_size, result_queue))
             p.start()
             processes.append(p)
-            
         for p in processes:
             p.join()
-            
         self.assertEqual(result_queue.qsize(), world_size)
-        
-        # Assert and validate correctness parameters across all execution tracks
         while not result_queue.empty():
             rank, success, grad_status = result_queue.get()
-            self.assertTrue(success, f"Distributed processing failed on rank block index: {rank}")
-            self.assertTrue(grad_status, f"Gradient synchronization stalled on rank block index: {rank}")
+            self.assertTrue(success, f"Distributed processing failed on rank: {rank}")
+            self.assertTrue(grad_status, f"Gradient synchronization stalled on rank: {rank}")
 
 if __name__ == '__main__':
     unittest.main()

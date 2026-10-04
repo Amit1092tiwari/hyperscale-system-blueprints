@@ -4,19 +4,18 @@ on:
   schedule:
     # Triggers dynamically every single calendar day at 03:35 UTC / 09:05 AM IST
     # (Off-peak minute :35 avoids high platform queue delays and drops at :00 and :30)
-    #- cron: '35 3 * * *'
-    - cron: '*/5 * * * *'
+    - cron: '35 3 * * *'
   workflow_dispatch: # Allows manual override triggers via the GitHub Console Actions tab
     inputs:
       model:
         description: "Gemini Model to execute generation"
         required: false
-        default: "gemini-2.5-pro"
+        default: "gemini-2.0-flash"
         type: choice
         options:
-          - "gemini-2.5-pro"
-          - "gemini-1.5-pro"
           - "gemini-2.0-flash"
+          - "gemini-1.5-pro"
+          - "gemini-1.5-flash"
 
 jobs:
   execute-architecture-generation:
@@ -45,7 +44,7 @@ jobs:
     - name: Execute Daily Wisdom Generator via Gemini Pro
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        GEMINI_MODEL: ${{ inputs.model || 'gemini-2.5-pro' }}
+        GEMINI_MODEL: ${{ inputs.model || 'gemini-2.0-flash' }}
       run: |
         chmod +x ./scripts/run_daily_wisdom.sh
         ./scripts/run_daily_wisdom.sh
