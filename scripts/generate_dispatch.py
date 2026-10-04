@@ -78,7 +78,7 @@ PILLARS = [
     },
 ]
 
-def get_series_day(current_date: str) -> int:
+def get_series_day(current_date: str = "") -> int:
     """Calculate the sequential series day number based on existing dispatches."""
     DISPATCHES_DIR.mkdir(parents=True, exist_ok=True)
     max_day = 0
@@ -1647,12 +1647,12 @@ def main():
     print("=" * 80)
 
     # 1. Determine Sequential Day & Deterministic Pillar Rotation
-    current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    series_day = get_series_day(current_date)
+    current_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
+    series_day = get_series_day()
     pillar_idx = (series_day - 1) % len(PILLARS)
     seed = PILLARS[pillar_idx]
 
-    target_filename = f"day_dispatch_{current_date}.md"
+    target_filename = f"day_dispatch_{current_timestamp}.md"
     target_filepath = DISPATCHES_DIR / target_filename
 
     print(f"Target Series Day: {series_day}")
