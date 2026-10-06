@@ -215,13 +215,23 @@ def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str) ->
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
+    # Explicitly disable automatic function calling to prevent AFC warning on single-turn generation
+    afc_config = (
+        types.AutomaticFunctionCallingConfig(disable=True)
+        if hasattr(types, "AutomaticFunctionCallingConfig")
+        else None
+    )
+    config_kwargs = {
+        "temperature": 0.7,
+        "max_output_tokens": 8192,
+    }
+    if afc_config is not None:
+        config_kwargs["automatic_function_calling"] = afc_config
+
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.7,
-            max_output_tokens=8192,
-        ),
+        config=types.GenerateContentConfig(**config_kwargs),
     )
     if response and response.text:
         return response.text
@@ -266,17 +276,26 @@ def generate_via_rest_api(api_key: str, model_name: str, prompt: str) -> str:
 
 def resolve_model_name(requested_model: str) -> str:
     """Ensure a valid, active Gemini model identifier is utilized."""
+    # Deprecated models automatically upgraded to active default
+    if requested_model == "gemini-2.0-flash":
+        print(f"[NOTICE] Deprecated model '{requested_model}' upgraded to active 'gemini-3.8-flash'.")
+        return "gemini-3.8-flash"
+
     valid_models = {
-        "gemini-2.0-flash": "gemini-2.0-flash",
+        "gemini-3.8-flash": "gemini-3.8-flash",
+        "gemini-3.0-flash": "gemini-3.0-flash",
+        "gemini-2.5-flash": "gemini-2.5-flash",
+        "gemini-2.5-pro": "gemini-2.5-pro",
         "gemini-1.5-pro": "gemini-1.5-pro",
         "gemini-1.5-flash": "gemini-1.5-flash",
     }
     if requested_model in valid_models:
         return valid_models[requested_model]
-    if "2.5" in requested_model or "pro" in requested_model:
-        print(f"[NOTICE] Model '{requested_model}' mapped to verified 'gemini-2.0-flash'.")
-        return "gemini-2.0-flash"
-    return "gemini-2.0-flash"
+    if requested_model.startswith("gemini-"):
+        return requested_model
+    if "pro" in requested_model or "flash" in requested_model:
+        return "gemini-3.8-flash"
+    return "gemini-3.8-flash"
 
 def main():
     print("=" * 80)
@@ -309,7 +328,7 @@ def main():
 
     # 4. Model & Auth Resolution
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    raw_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
+    raw_model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash").strip()
     model_name = resolve_model_name(raw_model)
 
     generated_content = ""
@@ -348,12 +367,24 @@ def main():
 
     if not is_unique:
         print(f"[WARNING] Uniqueness collision detected: {reason}", file=sys.stderr)
-        print("[RECOVERY] Selecting guaranteed unique blueprint from catalog...", file=sys.stderr)
-        seed, fallback_body = bc.get_next_unique_blueprint(series_day, past_dispatches)
-        generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches)
-        is_unique, reason = uniqueness.verify_dispatch_uniqueness(generated_content, past_dispatches)
-        if not is_unique:
-            print(f"[ERROR] Critical: Blueprint still collided: {reason}", file=sys.stderr)
+        print("[RECOVERY] Searching for guaranteed unique non-colliding blueprint from catalog...", file=sys.stderr)
+        recovery_success = False
+        for offset in range(len(bc.SEEDS)):
+            candidate_day = series_day + offset
+            candidate_seed, _ = bc.get_next_unique_blueprint(candidate_day, past_dispatches)
+            candidate_content = generate_mock_dispatch(series_day, candidate_seed, current_date, past_dispatches)
+            cand_unique, cand_reason = uniqueness.verify_dispatch_uniqueness(candidate_content, past_dispatches)
+            if cand_unique:
+                seed = candidate_seed
+                generated_content = candidate_content
+                is_unique = True
+                reason = cand_reason
+                recovery_success = True
+                print(f"[RECOVERY] Successfully resolved unique blueprint: '{seed['title']}'")
+                break
+
+        if not recovery_success:
+            print(f"[ERROR] Critical: Unable to find non-colliding blueprint: {reason}", file=sys.stderr)
             sys.exit(1)
 
     print(f"[SUCCESS] {reason}")

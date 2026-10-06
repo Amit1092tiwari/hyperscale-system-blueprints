@@ -15,12 +15,14 @@ class TestDispatchGenerator(unittest.TestCase):
         self.assertEqual(pillar_ids, {"A", "B", "C", "D"})
 
     def test_model_name_resolution(self):
-        self.assertEqual(gd.resolve_model_name("gemini-2.0-flash"), "gemini-2.0-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-3.8-flash"), "gemini-3.8-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-3.0-flash"), "gemini-3.0-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-2.5-flash"), "gemini-2.5-flash")
         self.assertEqual(gd.resolve_model_name("gemini-1.5-pro"), "gemini-1.5-pro")
         self.assertEqual(gd.resolve_model_name("gemini-1.5-flash"), "gemini-1.5-flash")
-        # Legacy/hypothetical models fall back cleanly
-        self.assertEqual(gd.resolve_model_name("gemini-2.5-pro"), "gemini-2.0-flash")
-        self.assertEqual(gd.resolve_model_name("unknown-model"), "gemini-2.0-flash")
+        # Deprecated gemini-2.0-flash automatically upgrades to active default
+        self.assertEqual(gd.resolve_model_name("gemini-2.0-flash"), "gemini-3.8-flash")
+        self.assertEqual(gd.resolve_model_name("unknown-model"), "gemini-3.8-flash")
 
     def test_all_four_pillars_generation(self):
         generated_titles = set()
