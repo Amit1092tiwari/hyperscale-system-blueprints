@@ -58,8 +58,41 @@ jobs:
         # Check for modifications to avoid throwing non-zero exit codes if nothing changed
         if ! git diff-index --quiet HEAD; then
           git commit -m "chore: auto-generated hyperscale architecture dispatch - $(date +'%Y-%m-%d %H:%M:%S UTC')"
-          git pull --rebase origin main || true
-          git push origin main
+
+          # Clean any stray unstaged working tree changes to guarantee clean rebase
+          git checkout -- . 2>/dev/null || true
+
+          # Resilient sync and push loop with exponential backoff for transient GitHub 500 errors
+          max_attempts=5
+          attempt=1
+          success=0
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Sync attempt $attempt of $max_attempts: pulling latest changes from origin main..."
+            if ! git pull --rebase origin main; then
+              echo "Rebase conflict or lock on attempt $attempt. Aborting rebase and retrying in $((attempt * 3))s..."
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt * 3))
+              attempt=$((attempt + 1))
+              continue
+            fi
+
+            echo "Pushing commits to origin main (attempt $attempt)..."
+            if git push origin main; then
+              echo "Successfully pushed generated blueprint to origin main."
+              success=1
+              break
+            else
+              echo "Push failed on attempt $attempt (transient GitHub 500 error or lock). Retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+              attempt=$((attempt + 1))
+            fi
+          done
+
+          if [ $success -ne 1 ]; then
+            echo "ERROR: Failed to push blueprint to origin main after $max_attempts attempts." >&2
+            exit 1
+          fi
         else
           echo "No blueprint updates detected. Skipping push."
         fi

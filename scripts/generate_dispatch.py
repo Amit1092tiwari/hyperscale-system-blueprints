@@ -70,7 +70,8 @@ def generate_mock_dispatch(
     series_day: int,
     seed: Optional[dict] = None,
     current_date: str = "",
-    past_dispatches: Optional[List[Dict]] = None
+    past_dispatches: Optional[List[Dict]] = None,
+    body: Optional[str] = None
 ) -> str:
     """
     Generate a high-density, production-grade architectural blueprint.
@@ -85,12 +86,15 @@ def generate_mock_dispatch(
 
     if seed is None:
         seed, body = bc.get_next_unique_blueprint(series_day, past_dispatches)
-    else:
-        blueprint_id = seed.get("id") or f"{seed.get('pillar_id', 'A')}1"
-        try:
-            body = bc.load_blueprint_body(blueprint_id)
-        except FileNotFoundError:
-            body = bc.load_blueprint_body("A1")
+    elif body is None:
+        if "body" in seed:
+            body = seed["body"]
+        else:
+            blueprint_id = seed.get("id") or f"{seed.get('pillar_id', 'A')}1"
+            try:
+                body = bc.load_blueprint_body(blueprint_id)
+            except FileNotFoundError:
+                body = bc.load_blueprint_body("A1")
 
     header = generate_header(series_day, seed, current_date)
     return header + "\n" + body.strip() + "\n"
@@ -346,7 +350,7 @@ def main():
                 print("[SUCCESS] Content generated via Gemini REST API.")
             except Exception as e:
                 print(f"[WARNING] REST API encountered: {e}. Falling back to deterministic catalog...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches)
+                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
         except Exception as e:
             print(f"[WARNING] SDK generation encountered: {e}. Trying direct REST API...", file=sys.stderr)
             try:
@@ -354,12 +358,12 @@ def main():
                 print("[SUCCESS] Content generated via Gemini REST API.")
             except Exception as inner_e:
                 print(f"[WARNING] REST API encountered: {inner_e}. Falling back to deterministic catalog...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches)
+                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
     else:
         print("\n[NOTICE] GEMINI_API_KEY environment variable is NOT set.")
         print("[NOTICE] Operating in resilient DRY-RUN / Deterministic high-density architectural blueprint mode.")
         print("[NOTICE] (To enable live Gemini generation, configure GEMINI_API_KEY in repository secrets).")
-        generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches)
+        generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
 
     # 5. Strict Uniqueness & Collision Verification Gate
     print("\n[VERIFICATION] Executing mathematical & semantic anti-repetition validation...")
@@ -371,8 +375,8 @@ def main():
         recovery_success = False
         for offset in range(len(bc.SEEDS)):
             candidate_day = series_day + offset
-            candidate_seed, _ = bc.get_next_unique_blueprint(candidate_day, past_dispatches)
-            candidate_content = generate_mock_dispatch(series_day, candidate_seed, current_date, past_dispatches)
+            candidate_seed, candidate_body = bc.get_next_unique_blueprint(candidate_day, past_dispatches)
+            candidate_content = generate_mock_dispatch(series_day, candidate_seed, current_date, past_dispatches, candidate_body)
             cand_unique, cand_reason = uniqueness.verify_dispatch_uniqueness(candidate_content, past_dispatches)
             if cand_unique:
                 seed = candidate_seed

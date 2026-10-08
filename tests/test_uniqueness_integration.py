@@ -39,8 +39,9 @@ class TestUniquenessIntegration(unittest.TestCase):
         self.assertIn("Exact title collision", reason)
 
     def test_uniqueness_verification_accepts_novel_blueprint(self):
-        seed, body = bc.get_next_unique_blueprint(4, self.past_dispatches)
-        header = f"# ⚡ 2026-10-04 - Dispatch #4: {seed['title']}\n\n- **Target Domain:** {seed['domain']}\n- **Framework Used:** {seed['framework']}\n"
+        next_day = max((d["day_number"] for d in self.past_dispatches), default=0) + 1
+        seed, body = bc.get_next_unique_blueprint(next_day, self.past_dispatches)
+        header = f"# ⚡ 2026-10-04 - Dispatch #{next_day}: {seed['title']}\n\n- **Target Domain:** {seed['domain']}\n- **Framework Used:** {seed['framework']}\n"
         full_content = header + body
         is_unique, reason = uniqueness.verify_dispatch_uniqueness(full_content, self.past_dispatches)
         self.assertTrue(is_unique, f"Verification failed: {reason}")

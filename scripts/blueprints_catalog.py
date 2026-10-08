@@ -293,11 +293,16 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
         # Match target pillar from available seeds
         for seed in available_seeds:
             if seed["pillar_id"] == target_pillar:
-                return seed, load_blueprint_body(seed["id"])
+                body = load_blueprint_body(seed["id"])
+                seed_copy = dict(seed)
+                seed_copy["body"] = body
+                return seed_copy, body
 
         # Fallback to the first available seed
-        chosen = available_seeds[0]
-        return chosen, load_blueprint_body(chosen["id"])
+        chosen = dict(available_seeds[0])
+        body = load_blueprint_body(chosen["id"])
+        chosen["body"] = body
+        return chosen, body
 
     # If all catalog blueprints have been published, synthesize a genuinely distinct adaptive tier
     # ensuring guaranteed uniqueness without ever colliding on title, domain, or content vocabulary
@@ -311,57 +316,25 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
             ("Autonomous Speculative Tensor Scheduling and Micro-Batch Overlap",
              "Pillar A: Artificial Intelligence & Machine Learning Engineering (Autonomous Speculative Tensor Scheduling)",
              "Distributed Dynamic Pipeline Parallelism with Elastic Activation Checkpoint Virtualization",
-             "A3"),
-            ("Quantized INT4 Weight Dequantization and Activation Sharding Mesh",
-             "Pillar A: Artificial Intelligence & Machine Learning Engineering (Quantized Low-Bit Tensor Kernels)",
-             "FP8/INT4 Mixed-Precision GEMM Tensor Operators with Dynamic Outlier Suppression",
-             "A2"),
-            ("Mixture-of-Experts Router Kernels and Token Dispatch Pipelines",
-             "Pillar A: Artificial Intelligence & Machine Learning Engineering (Sparse MoE Capacity Routing)",
-             "DeepSeek/Switch-Transformer Dynamic Top-K Dispatch Kernels with All-to-All Non-Blocking Communication",
-             "A1"),
+             "A_epoch"),
         ],
         "B": [
-            ("eBPF-Assisted Hardware Offload and Direct Memory Ring Switching",
-             "Pillar B: Cloud Platform Engineering & DevOps (Hardware Offload eBPF Acceleration)",
-             "SmartNIC P4 / eBPF Flow Engine with Zero-CPU Ingress Routing and Line-Rate Filtering",
-             "B1"),
             ("Kernel Memory Splicing and Zero-Copy RDMA Mesh Networking",
              "Pillar B: Cloud Platform Engineering & DevOps (Kernel Memory Splicing & InfiniBand RDMA)",
              "InfiniBand RoCEv2 Zero-Copy Queue Pair Fabric with Kernel Bypass Sockets",
-             "B3"),
-            ("Autonomous Cgroups v2 Pressure Regulation and Microservice Shedding",
-             "Pillar B: Cloud Platform Engineering & DevOps (Dynamic Cgroups PSI Load Shedding)",
-             "Linux PSI Pressure Kernel Daemon with Automated Microservice Concurrency Throttling",
-             "B4"),
+             "B_epoch"),
         ],
         "C": [
-            ("Real-Time Vectorized Stream Compaction and Metadata Pruning Mesh",
-             "Pillar C: Enterprise Data Systems & Lakehouses (Real-Time Stream Compaction)",
-             "Apache Arrow Flight Vectorized Compaction Core with Sub-Millisecond Manifest Ingestion",
-             "C1"),
             ("Federated Columnar Execution Vectors and Distributed Partition Slicing",
              "Pillar C: Enterprise Data Systems & Lakehouses (Federated Partition Slicing)",
              "DuckDB Distributed Substrait Vector Query Engine with Distributed Iceberg Manifest Pruning",
-             "C3"),
-            ("Multi-Cloud Object Cache Virtualization and Parquet Bloom Pruning",
-             "Pillar C: Enterprise Data Systems & Lakehouses (Tiered Object Storage Caching)",
-             "Tiered Local SSD NVMe Block Cache with Split-Block Vectorized Bloom Filtering",
-             "C2"),
+             "C_epoch"),
         ],
         "D": [
             ("Homomorphic Encrypted Computation Fabric for Multi-Tenant Health Records",
              "Pillar D: High-Security Digital Health & Regulatory Systems (Fully Homomorphic Encryption FHE)",
              "CKKS / BFV Homomorphic Arithmetic Evaluation Engine for Encrypted Patient Telemetry",
-             "D1"),
-            ("Zero-Knowledge Membership Proof Verification for Clinical Genomic Streams",
-             "Pillar D: High-Security Digital Health & Regulatory Systems (ZK Genomic Proof Verification)",
-             "Groth16 / Plonky2 Succinct Non-Interactive Proof Engine for High-Velocity Biometric Streams",
-             "D3"),
-            ("Hardware Memory Isolation and Attestation Enclaves for Patient Telemetry",
-             "Pillar D: High-Security Digital Health & Regulatory Systems (Hardware Memory Attestation)",
-             "Intel TDX / AMD SEV Confidential Virtual Machine Enclaves with Ephemeral Memory Encryption",
-             "D2"),
+             "D_epoch"),
         ]
     }
 
@@ -380,4 +353,5 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
     base_seed["pillar_id"] = target_pillar
 
     base_body = load_blueprint_body(template_id)
+    base_seed["body"] = base_body
     return base_seed, base_body
