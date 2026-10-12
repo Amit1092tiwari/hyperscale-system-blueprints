@@ -9,6 +9,7 @@ import os
 import sys
 import re
 import json
+import time
 import datetime
 from pathlib import Path
 import urllib.request
@@ -301,6 +302,82 @@ def resolve_model_name(requested_model: str) -> str:
         return "gemini-3.8-flash"
     return "gemini-3.8-flash"
 
+def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_retries: int = 3) -> Optional[str]:
+    """
+    Attempt generation with exponential backoff on transient errors (503, 429, 500, network timeouts).
+    Tries SDK first, then REST API.
+    """
+    for attempt in range(1, max_retries + 1):
+        # 1. Attempt via official google-genai SDK
+        try:
+            return generate_via_google_genai_sdk(api_key, model_name, prompt)
+        except ImportError:
+            pass  # Fall through to REST API
+        except Exception as e:
+            err_str = str(e)
+            is_transient = any(c in err_str for c in ["503", "429", "500", "502", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand"])
+            if is_transient and attempt < max_retries:
+                backoff_sec = 2 ** attempt
+                print(f"[WARNING] SDK '{model_name}' transient error ({err_str}). Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
+                time.sleep(backoff_sec)
+                continue
+            print(f"[WARNING] SDK generation failed on '{model_name}': {e}. Trying direct REST API...", file=sys.stderr)
+
+        # 2. Attempt via direct REST API
+        try:
+            return generate_via_rest_api(api_key, model_name, prompt)
+        except urllib.error.HTTPError as he:
+            is_transient = he.code in [503, 429, 500, 502, 504]
+            if is_transient and attempt < max_retries:
+                backoff_sec = 2 ** attempt
+                print(f"[WARNING] REST API '{model_name}' HTTP {he.code}. Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
+                time.sleep(backoff_sec)
+                continue
+            print(f"[WARNING] REST API encountered HTTP {he.code} on '{model_name}'.", file=sys.stderr)
+            break
+        except Exception as e:
+            if attempt < max_retries:
+                backoff_sec = 2 ** attempt
+                print(f"[WARNING] REST API '{model_name}' encountered: {e}. Retrying in {backoff_sec}s...", file=sys.stderr)
+                time.sleep(backoff_sec)
+                continue
+            print(f"[WARNING] REST API error on '{model_name}': {e}", file=sys.stderr)
+            break
+
+    return None
+
+def generate_content_with_resilience(api_key: str, requested_model: str, prompt: str) -> Optional[str]:
+    """
+    Execute generation with multi-model fallback cascade.
+    If primary model is experiencing high demand (503) or rate limits (429),
+    automatically cascades to alternative active Gemini models.
+    """
+    primary = resolve_model_name(requested_model)
+    fallback_chain = [
+        primary,
+        "gemini-3.8-flash",
+        "gemini-3.0-flash",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash",
+    ]
+    # Deduplicate while preserving order
+    candidate_models = []
+    for m in fallback_chain:
+        if m not in candidate_models:
+            candidate_models.append(m)
+
+    for idx, model in enumerate(candidate_models, start=1):
+        print(f"\n[INFO] [{idx}/{len(candidate_models)}] Initiating generation via model: {model}...")
+        result = attempt_model_generation(api_key, model, prompt)
+        if result and result.strip():
+            print(f"[SUCCESS] Content cleanly generated via model: {model}")
+            return result
+        print(f"[INFO] Model '{model}' unavailable or high demand. Cascading to next candidate model...")
+
+    return None
+
 def main():
     print("=" * 80)
     print("HYPERSCALE SYSTEM BLUEPRINT: VISUAL GEMINI DISPATCH ENGINE")
@@ -333,32 +410,15 @@ def main():
     # 4. Model & Auth Resolution
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     raw_model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash").strip()
-    model_name = resolve_model_name(raw_model)
 
     generated_content = ""
 
     if api_key:
-        print(f"\n[INFO] GEMINI_API_KEY detected. Initiating generation via model: {model_name}...")
-        try:
-            print("[INFO] Attempting generation with 'google-genai' SDK...")
-            generated_content = generate_via_google_genai_sdk(api_key, model_name, prompt)
-            print("[SUCCESS] Content generated via google-genai SDK.")
-        except ImportError:
-            print("[INFO] 'google-genai' package not installed. Falling back to direct REST API...")
-            try:
-                generated_content = generate_via_rest_api(api_key, model_name, prompt)
-                print("[SUCCESS] Content generated via Gemini REST API.")
-            except Exception as e:
-                print(f"[WARNING] REST API encountered: {e}. Falling back to deterministic catalog...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
-        except Exception as e:
-            print(f"[WARNING] SDK generation encountered: {e}. Trying direct REST API...", file=sys.stderr)
-            try:
-                generated_content = generate_via_rest_api(api_key, model_name, prompt)
-                print("[SUCCESS] Content generated via Gemini REST API.")
-            except Exception as inner_e:
-                print(f"[WARNING] REST API encountered: {inner_e}. Falling back to deterministic catalog...", file=sys.stderr)
-                generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
+        print(f"\n[INFO] GEMINI_API_KEY detected. Starting resilient multi-model dispatch engine...")
+        generated_content = generate_content_with_resilience(api_key, raw_model, prompt) or ""
+        if not generated_content:
+            print("[WARNING] All candidate Gemini models exhausted. Falling back to deterministic catalog...", file=sys.stderr)
+            generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
     else:
         print("\n[NOTICE] GEMINI_API_KEY environment variable is NOT set.")
         print("[NOTICE] Operating in resilient DRY-RUN / Deterministic high-density architectural blueprint mode.")
@@ -372,24 +432,14 @@ def main():
     if not is_unique:
         print(f"[WARNING] Uniqueness collision detected: {reason}", file=sys.stderr)
         print("[RECOVERY] Searching for guaranteed unique non-colliding blueprint from catalog...", file=sys.stderr)
-        recovery_success = False
-        for offset in range(len(bc.SEEDS)):
-            candidate_day = series_day + offset
-            candidate_seed, candidate_body = bc.get_next_unique_blueprint(candidate_day, past_dispatches)
-            candidate_content = generate_mock_dispatch(series_day, candidate_seed, current_date, past_dispatches, candidate_body)
-            cand_unique, cand_reason = uniqueness.verify_dispatch_uniqueness(candidate_content, past_dispatches)
-            if cand_unique:
-                seed = candidate_seed
-                generated_content = candidate_content
-                is_unique = True
-                reason = cand_reason
-                recovery_success = True
-                print(f"[RECOVERY] Successfully resolved unique blueprint: '{seed['title']}'")
-                break
-
-        if not recovery_success:
+        recovery_seed, recovery_body = bc.get_next_unique_blueprint(series_day, past_dispatches)
+        generated_content = generate_mock_dispatch(series_day, recovery_seed, current_date, past_dispatches, recovery_body)
+        is_unique, reason = uniqueness.verify_dispatch_uniqueness(generated_content, past_dispatches)
+        if not is_unique:
             print(f"[ERROR] Critical: Unable to find non-colliding blueprint: {reason}", file=sys.stderr)
             sys.exit(1)
+        seed = recovery_seed
+        print(f"[RECOVERY] Successfully resolved unique blueprint: '{seed['title']}'")
 
     print(f"[SUCCESS] {reason}")
 

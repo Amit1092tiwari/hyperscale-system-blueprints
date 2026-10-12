@@ -93,6 +93,35 @@ class TestDispatchGenerator(unittest.TestCase):
 
         self.assertEqual(len(titles), 8)
 
+    def test_day_32_generation_uniqueness(self):
+        """Verify that Day 32 specifically generates a 100% unique blueprint against all actual dispatches."""
+        past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
+        seed, body = gd.bc.get_next_unique_blueprint(32, past)
+        
+        self.assertEqual(seed["pillar_id"], "D", "Day 32 must belong to Pillar D")
+        content = gd.generate_mock_dispatch(32, seed, "2026-10-12", past, body)
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(content, past)
+        self.assertTrue(is_unique, f"Day 32 collision: {reason}")
+
+    def test_resilient_gemini_fallback_on_simulated_503(self):
+        """Verify that attempt_model_generation and fallback chain handle transient 503 gracefully."""
+        from unittest.mock import patch
+        import urllib.error
+
+        # Simulate 503 HTTPError from REST API
+        mock_503 = urllib.error.HTTPError(
+            url="https://generativelanguage.googleapis.com",
+            code=503,
+            msg="Service Unavailable",
+            hdrs={},
+            fp=None
+        )
+
+        with patch("generate_dispatch.generate_via_google_genai_sdk", side_effect=RuntimeError("503 UNAVAILABLE: high demand")):
+            with patch("generate_dispatch.generate_via_rest_api", side_effect=mock_503):
+                result = gd.attempt_model_generation("mock-key", "gemini-3.8-flash", "test-prompt", max_retries=1)
+                self.assertIsNone(result, "Should return None on exhausted 503 retries without throwing uncaught exception")
+
 if __name__ == '__main__':
     unittest.main()
 
