@@ -16,13 +16,74 @@ class TestDispatchGenerator(unittest.TestCase):
 
     def test_model_name_resolution(self):
         self.assertEqual(gd.resolve_model_name("gemini-3.8-flash"), "gemini-3.8-flash")
-        self.assertEqual(gd.resolve_model_name("gemini-3.0-flash"), "gemini-3.0-flash")
-        self.assertEqual(gd.resolve_model_name("gemini-2.5-flash"), "gemini-2.5-flash")
-        self.assertEqual(gd.resolve_model_name("gemini-1.5-pro"), "gemini-1.5-pro")
-        self.assertEqual(gd.resolve_model_name("gemini-1.5-flash"), "gemini-1.5-flash")
-        # Deprecated gemini-2.0-flash automatically upgrades to active default
+        self.assertEqual(gd.resolve_model_name("gemini-3.1-pro-preview"), "gemini-3.1-pro-preview")
+        # Obsolete models upgrade to active defaults
+        self.assertEqual(gd.resolve_model_name("gemini-3.0-flash"), "gemini-3.8-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-2.5-flash"), "gemini-3.8-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-1.5-flash"), "gemini-3.8-flash")
         self.assertEqual(gd.resolve_model_name("gemini-2.0-flash"), "gemini-3.8-flash")
+        self.assertEqual(gd.resolve_model_name("gemini-2.5-pro"), "gemini-3.1-pro-preview")
+        self.assertEqual(gd.resolve_model_name("gemini-1.5-pro"), "gemini-3.1-pro-preview")
+        self.assertEqual(gd.resolve_model_name("gemini-pro"), "gemini-3.1-pro-preview")
         self.assertEqual(gd.resolve_model_name("unknown-model"), "gemini-3.8-flash")
+
+    def test_sanitize_generated_dispatch_enforces_line1_title(self):
+        seed = gd.PILLARS[0]
+        # Case 1: Badges above title
+        content_with_badges_first = f"""[![Pillar](https://img.shields.io/badge/Pillar-A-red)]()
+
+# ⚡ 2026-10-14 - Dispatch #36: {seed['title']}
+
+## 1. System Parameters
+- **Target Domain:** {seed['domain']}
+"""
+        sanitized = gd.sanitize_generated_dispatch(content_with_badges_first, 36, seed, "2026-10-14")
+        lines = sanitized.splitlines()
+        self.assertTrue(lines[0].startswith("# ⚡ 2026-10-14 - Dispatch #36:"))
+        self.assertIn("## 1. System Parameters", sanitized)
+
+        # Case 2: Outer markdown code fence
+        fenced_content = f"""```markdown
+# ⚡ 2026-10-14 - Dispatch #36: {seed['title']}
+
+## 1. System Parameters
+- **Target Domain:** {seed['domain']}
+```"""
+        sanitized = gd.sanitize_generated_dispatch(fenced_content, 36, seed, "2026-10-14")
+        self.assertFalse(sanitized.startswith("```"))
+        self.assertTrue(sanitized.startswith("# ⚡ 2026-10-14 - Dispatch #36:"))
+
+    def test_day_36_generation_uniqueness(self):
+        """Verify that Day 36 specifically generates a 100% unique blueprint against all actual dispatches."""
+        past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
+        self.assertEqual(len(past), 36)
+        seed, body = gd.bc.get_next_unique_blueprint(36, past)
+
+        self.assertEqual(seed["pillar_id"], "D", "Day 36 must belong to Pillar D")
+        content = gd.generate_mock_dispatch(36, seed, "2026-10-14", past, body)
+        sanitized = gd.sanitize_generated_dispatch(content, 36, seed, "2026-10-14")
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past)
+        self.assertTrue(is_unique, f"Day 36 collision: {reason}")
+
+    def test_attempt_model_generation_aborts_immediately_on_404(self):
+        """Verify that a 404 NOT_FOUND response aborts immediately without burning retries."""
+        from unittest.mock import patch
+        import urllib.error
+
+        mock_404 = urllib.error.HTTPError(
+            url="https://generativelanguage.googleapis.com",
+            code=404,
+            msg="Not Found",
+            hdrs={},
+            fp=None
+        )
+
+        with patch("generate_dispatch.generate_via_google_genai_sdk", side_effect=RuntimeError("404 NOT_FOUND")):
+            with patch("generate_dispatch.generate_via_rest_api", side_effect=mock_404) as mock_rest:
+                result = gd.attempt_model_generation("mock-key", "gemini-obsolete-model", "test-prompt", max_retries=4)
+                self.assertIsNone(result)
+                # Should not have called REST API because SDK failed with 404 and aborted
+                mock_rest.assert_not_called()
 
     def test_all_four_pillars_generation(self):
         generated_titles = set()

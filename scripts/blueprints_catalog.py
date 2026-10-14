@@ -324,6 +324,22 @@ SEEDS = [
         "badge_color": "red",
         "badge_name": "Threshold%20Ed25519",
     },
+    # Tier 6 (Pillar D6)
+    {
+        "id": "D6",
+        "pillar_id": "D",
+        "domain": "Pillar D: High-Security Digital Health & Regulatory Systems (Selective Disclosure BBS+ Signatures & W3C Verifiable Credentials) [Partition Epoch 6]",
+        "framework": "BBS+ Multi-Message Digital Signature Scheme with Zero-Knowledge Proof-of-Knowledge (BLS12-381 Bilinear Pairings)",
+        "tech_stack": "BLS12-381 Elliptic Curves, BBS+ Cryptographic Core, Rust pyo3 Wrapper, W3C Verifiable Credentials, OpenLineage",
+        "bottleneck": "All-or-nothing PHI data disclosure during clinical trial verification leading to regulatory non-compliance",
+        "protocol": "gRPC mTLS 1.3 with W3C Verifiable Credential ZKP Exchange Headers",
+        "lineage": "OpenLineage HIPAA audit facets tracking credential blinded attributes and pseudonym issuance",
+        "components": "BBS+ Multi-Message Signer, Blinded Commitment Generator, Zero-Knowledge Selective Discloser, Bilinear Pairing Verifier Engine",
+        "concepts": "Bilinear Pairings, Blinded Attribute Commitments, Selective Attribute Disclosure, Zero-Knowledge Proofs",
+        "title": "BBS+ Cryptographic Selective Disclosure Signatures and W3C Verifiable Credentials Fabric for Sovereign Genomic EHR (Adaptive Hyperscale Epoch 6)",
+        "badge_color": "red",
+        "badge_name": "BBS+%20Signatures",
+    },
 ]
 
 # Backward compatibility alias
@@ -445,10 +461,54 @@ PARADIGM_MATRIX = {
     ]
 }
 
+PILLAR_METADATA = {
+    "A": {
+        "analogy_system": "Ant Colony Stigmergic Optimization and Pheromone Route Splicing",
+        "analogy_text": "In leafcutter ant foraging columns, individual workers lay down volatile hydrocarbon trails. Local encounters and evaporative decay reinforce optimal topological paths between nesting vaults and canopy harvest zones without a centralized queen issuing routing schedules. When an obstacle emerges, negative feedback loops rapidly prune congested branches, redirecting worker flow with zero scheduling latency.",
+        "test_class": "DistributedTensorSchedulerHarness",
+        "kpi_name": "Gradient Synchronization Overhead",
+        "kpi_id": "grad_sync_latency_us",
+        "failure_name": "All-to-All Transport Straggler",
+        "failure_cause": "PCIe lane contention or GPU thermal throttling causing collective all-gather desynchronization.",
+        "failure_mitigation": "Asynchronous non-blocking NCCL stream splicing with dynamic straggler backup worker migration.",
+    },
+    "B": {
+        "analogy_system": "Cephalopod Chromatophore Selective Pigment Modulation",
+        "analogy_text": "Deep-sea cephalopods navigate predator-dense pelagic depths using multi-layer dermal chromatophores and iridophores. Rather than broadcasting full systemic metabolic states, radial motor neurons contract selective pigment sacs to display contextual camouflage wavelengths, shielding internal physiological vitality while projecting verified luminescent signals to conspecifics.",
+        "test_class": "KernelRingBufferPacketHarness",
+        "kpi_name": "Ingress Splicing Jitter",
+        "kpi_id": "ingress_splicing_jitter_ns",
+        "failure_name": "Ring Buffer Overrun Cascade",
+        "failure_cause": "Line-rate burst saturation exceeding memory page pool descriptors before kernel thread wake.",
+        "failure_mitigation": "Lockless single-producer single-consumer ring queues with NUMA-pinned user-space polling.",
+    },
+    "C": {
+        "analogy_system": "Alluvial River Delta Silt Sorting and Hydrodynamic Meander Slicing",
+        "analogy_text": "In braided river deltas, sediment-laden currents encounter dynamic gravel bars and distributary channels. Dense gravels and quartz sands settle rapidly in high-energy spillways, while fine silts and organic clays stay suspended until reaching low-energy estuaries. This natural hydraulic classification partitions particle volumes continuously without mechanical sieves or upstream staging dams.",
+        "test_class": "VectorizedLakehouseCompactorHarness",
+        "kpi_name": "Columnar Partition Compaction Speed",
+        "kpi_id": "columnar_partition_compaction_mb_sec",
+        "failure_name": "Metadata Manifest Split Contention",
+        "failure_cause": "Concurrent writer commit collisions attempting atomic snapshot CAS transitions on remote storage.",
+        "failure_mitigation": "Vectorized bloom filter negative pushdown with decoupled manifest log compaction.",
+    },
+    "D": {
+        "analogy_system": "Adaptive Immune System V(D)J Genetic Recombination and Clonal Selection",
+        "analogy_text": "Human B-lymphocytes generate diverse antibody repertoires through somatic recombination of Variable (V), Diversity (D), and Joining (J) gene segments. When a novel viral epitope enters peripheral lymphatic tissue, receptor editing and clonal deletion eradicate self-reactive cells while amplifying high-affinity paratopes, maintaining systemic immunity without exposing germline genetic reserves to pathological tampering.",
+        "test_class": "CryptographicEnclaveAttestationHarness",
+        "kpi_name": "Pairing Attestation Latency",
+        "kpi_id": "pairing_attestation_latency_us",
+        "failure_name": "Byzantine Enclave Replay Attempt",
+        "failure_cause": "Stale attestation ticket retransmitted across unauthenticated inter-enclave gRPC endpoints.",
+        "failure_mitigation": "Context-bound ephemeral nonces derived from mutual TLS session handshake keys.",
+    },
+}
+
 def synthesize_procedural_blueprint_body(seed: Dict) -> str:
     """
     Synthesize a rich, production-grade 10-section markdown body adhering strictly to the
     architectural standards, with genuine Python unit tests, Mermaid graphs, and ASCII layouts.
+    Guarantees unique vocabulary per pillar and seed.
     """
     title = seed["title"]
     domain = seed["domain"]
@@ -459,6 +519,17 @@ def synthesize_procedural_blueprint_body(seed: Dict) -> str:
     lineage = seed["lineage"]
     components = seed["components"]
     concepts = seed["concepts"]
+    pillar_id = seed.get("pillar_id", "A")
+
+    meta = PILLAR_METADATA.get(pillar_id, PILLAR_METADATA["A"])
+    analogy_sys = meta["analogy_system"]
+    analogy_desc = meta["analogy_text"]
+    test_cls = f"{meta['test_class']}_{seed.get('id', 'Seed')}"
+    kpi_name = meta["kpi_name"]
+    kpi_id = meta["kpi_id"]
+    fail_name = meta["failure_name"]
+    fail_cause = meta["failure_cause"]
+    fail_mit = meta["failure_mitigation"]
 
     return f"""## 2. Problem Statement
 
@@ -619,8 +690,8 @@ Through the implementation of {concepts}, memory allocations are pinned in conti
 
 ### 🌿 The Nature Analogy
 > [!TIP]
-> **The Biological System: Avian Respiratory Dual-Cycle Cross-Current Exchange**  
-> Unlike mammalian lungs which rely on tidal, bidirectional breathing (where inhalation and exhalation share the same pulmonary tract, inducing dead space and stagnation), birds utilize a continuous, unidirectional airflow powered by specialized air sacs. Air flows continuously across the parabronchi in a single direction during both inhalation and exhalation. This cross-current oxygen exchange maintains a continuous partial pressure gradient, allowing birds to sustain intense metabolic demands during high-altitude trans-continental flights without respiratory fatigue.
+> **The Biological System: {analogy_sys}**  
+> {analogy_desc}
 
 Our architecture implements an identical unidirectional processing pipeline. Rather than stopping processing to flush buffers or allocate memory, the continuous streaming ring maintains an uninterrupted computational gradient. Data continuously traverses the execution cores in a lock-free forward sweep, providing unbroken hyperscale efficiency under maximum system load.
 
@@ -666,10 +737,10 @@ jobs:
 
       - name: Execute Pipeline Unit & Assertion Suite
         run: |
-          python -m unittest -v test_hyperscale_engine.py
+          python -m unittest -v test_{pillar_id.lower()}_engine.py
 ```
 
-### 🐍 File 2: test_hyperscale_engine.py
+### 🐍 File 2: test_{pillar_id.lower()}_engine.py
 ```python
 \"\"\"
 Production-Grade Verification Harness for {title}.
@@ -680,8 +751,8 @@ import unittest
 import time
 from typing import List, Dict, Any
 
-class HyperscaleEngineCore:
-    \"\"\"Simulated high-throughput execution core.\"\"\"
+class {test_cls}:
+    \"\"\"Simulated high-throughput execution core for {pillar_id}.\"\"\"
     def __init__(self, capacity: int = 1000):
         self.capacity = capacity
         self.buffer: List[Dict[str, Any]] = []
@@ -699,9 +770,9 @@ class HyperscaleEngineCore:
         self.processed_count += len(batch)
         return len(batch)
 
-class TestHyperscaleEngine(unittest.TestCase):
+class Test{pillar_id}Engine(unittest.TestCase):
     def setUp(self):
-        self.engine = HyperscaleEngineCore(capacity=500)
+        self.engine = {test_cls}(capacity=500)
 
     def test_ingest_and_capacity_bounds(self):
         for i in range(500):
@@ -732,7 +803,7 @@ if __name__ == "__main__":
 
 ## 8. KPI Monitoring Framework
 
-• **Engine Processing Latency** (`pipeline_execution_latency_ms`):
+• **{kpi_name}** (`{kpi_id}`):
 	• Why: Measures total end-to-end processing duration from arrival at ingress queue to successful commitment. Baseline threshold is strictly < 20.0ms.
 
 • **Ring Buffer Backpressure Ratio** (`buffer_backpressure_ratio_pct`):
@@ -747,7 +818,7 @@ if __name__ == "__main__":
 
 | Failure Vector | Technical Root Cause | System Blast Radius | Production Mitigation Pattern |
 | :--- | :--- | :--- | :--- |
-| 🔴 **Memory Allocation Saturation** | Ingress burst exceeds configured ring buffer threshold. | Ingestion thread blockage and dropped transaction payloads. | Circular non-blocking ring buffer with lockless drop metrics and client retry headers. |
+| 🔴 **{fail_name}** | {fail_cause} | Ingestion thread blockage and dropped transaction payloads. | {fail_mit} |
 | 🟡 **Lock Contention Under Thread Spikes** | Concurrent workers attempting synchronized queue read locks. | CPU scheduling churn and tail latency amplification. | Per-core single-producer single-consumer (SPSC) ring isolation with NUMA affinity. |
 | 🟠 **Lineage Emission Timeout** | Remote audit broker temporarily unreachable. | Stalled commit pipeline due to synchronous compliance logging. | Asynchronous local ring buffer spooling with background flush workers. |
 
@@ -848,21 +919,33 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
                     return candidate_seed, body
 
     # 3. Dynamic fail-safe: synthesize with distinct salt to guarantee 100% uniqueness
-    fail_safe_seed = {
-        "id": f"{target_pillar}_adaptive_{series_day}",
-        "pillar_id": target_pillar,
-        "title": f"Autonomous Hyperscale Vector Execution Engine for {target_pillar} (Adaptive Day {series_day} Epoch {epoch_count})",
-        "domain": f"Pillar {target_pillar}: Adaptive Hyperscale Infrastructure [Series Day {series_day} Epoch {epoch_count}]",
-        "framework": f"Hyperscale Vector Engine v{epoch_count}.{series_day % 10} with Zero-Copy Streaming Pipeline",
-        "tech_stack": "Distributed Vector Engine, OpenLineage, GitHub Actions CI",
-        "bottleneck": f"Cross-cluster latency and queue contention under Series Day {series_day} workloads",
-        "protocol": "Zero-Copy RPC / Arrow Flight IPC Protocol",
-        "lineage": "OpenLineage execution audit facets recording adaptive run parameters",
-        "components": "Vector Sieve, Asynchronous Ring Allocator, Local Validation Mock",
-        "concepts": "Zero-Copy Memory Mapping, Lock-Free Rings, Vectorized Execution, Adaptive Slicing",
-        "badge_color": "blue" if target_pillar == "A" else ("purple" if target_pillar == "B" else ("teal" if target_pillar == "C" else "red")),
-        "badge_name": f"Pillar%20{target_pillar}",
-    }
-    body = synthesize_procedural_blueprint_body(fail_safe_seed)
-    fail_safe_seed["body"] = body
+    for salt_idx in range(50):
+        salt_epoch = epoch_count + salt_idx
+        fail_safe_seed = {
+            "id": f"{target_pillar}_adaptive_{series_day}_{salt_idx}",
+            "pillar_id": target_pillar,
+            "title": f"Autonomous Hyperscale Vector Execution Engine for {target_pillar} (Adaptive Day {series_day} Epoch {salt_epoch})",
+            "domain": f"Pillar {target_pillar}: Adaptive Hyperscale Infrastructure [Series Day {series_day} Epoch {salt_epoch}]",
+            "framework": f"Hyperscale Vector Engine v{salt_epoch}.{salt_idx} with Zero-Copy Streaming Pipeline",
+            "tech_stack": "Distributed Vector Engine, OpenLineage, GitHub Actions CI",
+            "bottleneck": f"Cross-cluster latency and queue contention under Series Day {series_day} Epoch {salt_epoch} workloads",
+            "protocol": "Zero-Copy RPC / Arrow Flight IPC Protocol",
+            "lineage": f"OpenLineage execution audit facets recording adaptive run parameters for Epoch {salt_epoch}",
+            "components": "Vector Sieve, Asynchronous Ring Allocator, Local Validation Mock",
+            "concepts": "Zero-Copy Memory Mapping, Lock-Free Rings, Vectorized Execution, Adaptive Slicing",
+            "badge_color": "blue" if target_pillar == "A" else ("purple" if target_pillar == "B" else ("teal" if target_pillar == "C" else "red")),
+            "badge_name": f"Pillar%20{target_pillar}",
+        }
+        body = synthesize_procedural_blueprint_body(fail_safe_seed)
+        fail_safe_seed["body"] = body
+
+        mock_header = (
+            f"# ⚡ 2026-10-12 - Dispatch #{series_day}: {fail_safe_seed['title']}\n\n"
+            f"- **Target Domain:** {fail_safe_seed['domain']}\n"
+            f"- **Framework Used:** {fail_safe_seed['framework']}\n"
+        )
+        is_unique, reason = uniqueness.verify_dispatch_uniqueness(mock_header + body, past_dispatches)
+        if is_unique:
+            return fail_safe_seed, body
+
     return fail_safe_seed, body

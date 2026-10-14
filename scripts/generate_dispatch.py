@@ -136,6 +136,12 @@ MANDATORY NOVELTY REQUIREMENTS:
 ================================================================================
 
 CRITICAL INSTRUCTION: MAKE THE OUTPUT VISUALLY STUNNING AND AESTHETICALLY POLISHED!
+CRITICAL FORMATTING INVARIANTS:
+1. LINE 1 of your response MUST BE EXACTLY:
+# ⚡ {current_date} - Dispatch #{series_day}: {seed['title']}
+Do NOT prepend any markdown backtick fences (```markdown), conversational filler, or badges before Line 1.
+2. Put the shield badges immediately BELOW the title (Lines 3-6).
+
 Utilize GitHub-Flavored Markdown best practices:
 1. Sleek Header with Badges: Include shield badges for the Pillar, Framework, Security Level, and Local-First CI Status.
 2. Clean System Parameters: Present "## 1. System Parameters" as a clean, standard Markdown bulleted list with bold keys (no duplicate tables):
@@ -279,35 +285,135 @@ def generate_via_rest_api(api_key: str, model_name: str, prompt: str) -> str:
             raise RuntimeError(f"No content parts returned in candidate: {candidates[0]}")
         return parts[0].get("text", "")
 
+def sanitize_generated_dispatch(
+    content: str,
+    series_day: int,
+    seed: dict,
+    current_date: str = ""
+) -> str:
+    """
+    Ensure the generated dispatch strictly conforms to the repository formatting standards:
+    1. Line 1 MUST be the exact H1 title: '# ⚡ {current_date} - Dispatch #{series_day}: {seed['title']}'.
+    2. Followed by shield badges, separator, and '## 1. System Parameters'.
+    3. Strips outer markdown fences (```markdown ... ```) or conversational intro/outro text.
+    """
+    if not current_date:
+        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+
+    text = content.strip()
+
+    # Strip outer markdown wrapper if model wrapped entire document in ```markdown ... ```
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            first_line = text[:first_newline].strip()
+            if first_line.startswith("```"):
+                text = text[first_newline + 1:]
+        if text.endswith("```"):
+            last_fence = text.rfind("```")
+            text = text[:last_fence].strip()
+
+    canonical_title = f"# ⚡ {current_date} - Dispatch #{series_day}: {seed['title']}"
+
+    # Search for an existing # ⚡ title line
+    title_match = re.search(r"^#\s*⚡.*$", text, re.MULTILINE)
+
+    # Check for Section 1 start
+    s1_match = re.search(r"##\s*1\.\s*System Parameters", text, re.IGNORECASE)
+
+    if title_match:
+        # Title was found in text. Everything from the title onwards is the valid blueprint body
+        text_from_title = text[title_match.start():]
+        lines = text_from_title.splitlines()
+        lines[0] = canonical_title
+        text = "\n".join(lines)
+    elif s1_match:
+        # Title was omitted entirely but Section 1 exists
+        header = generate_header(series_day, seed, current_date)
+        s1_end = s1_match.start() + len(s1_match.group(0))
+        text = header + "\n" + text[s1_end:].lstrip()
+    else:
+        # Neither title nor Section 1 matched; prepend canonical header
+        header = generate_header(series_day, seed, current_date)
+        text = header + "\n" + text
+
+    # Verify badges exist between title and Section 1
+    s1_check = re.search(r"##\s*1\.\s*System Parameters", text, re.IGNORECASE)
+    if s1_check:
+        pre_s1 = text[:s1_check.start()]
+        if "[![Pillar" not in pre_s1:
+            badges_block = f"""
+[![Pillar](https://img.shields.io/badge/Pillar-{seed['badge_name']}-{seed['badge_color']}?style=for-the-badge)]()
+[![Validation](https://img.shields.io/badge/Validation-Local--First%20CI%20Verified-emerald?style=for-the-badge&logo=githubactions)]()
+[![Architecture](https://img.shields.io/badge/Architecture-Zero--Cost%20Mock%20Harness-blueviolet?style=for-the-badge)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)]()
+
+---
+"""
+            first_newline = text.find("\n")
+            if first_newline != -1:
+                text = text[:first_newline] + "\n" + badges_block + text[first_newline + 1:].lstrip()
+            else:
+                text = text + "\n" + badges_block
+
+    # Final check: Ensure Line 1 is strictly the canonical title
+    lines = text.splitlines()
+    if not lines or not lines[0].startswith("# ⚡"):
+        idx = 0
+        while idx < len(lines) and not lines[idx].startswith("# ⚡"):
+            idx += 1
+        if idx < len(lines):
+            lines = lines[idx:]
+        else:
+            lines = [canonical_title, ""] + lines
+        text = "\n".join(lines)
+
+    return text.strip() + "\n"
+
 def resolve_model_name(requested_model: str) -> str:
     """Ensure a valid, active Gemini model identifier is utilized."""
-    # Deprecated models automatically upgraded to active default
-    if requested_model == "gemini-2.0-flash":
+    # Deprecated models automatically upgraded to active defaults
+    deprecated_to_flash = {
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+        "gemini-3.0-flash",
+        "gemini-1.5-flash",
+    }
+    deprecated_to_pro = {
+        "gemini-2.5-pro",
+        "gemini-1.5-pro",
+        "gemini-pro",
+    }
+    if requested_model in deprecated_to_flash:
         print(f"[NOTICE] Deprecated model '{requested_model}' upgraded to active 'gemini-3.8-flash'.")
         return "gemini-3.8-flash"
+    if requested_model in deprecated_to_pro:
+        print(f"[NOTICE] Deprecated model '{requested_model}' upgraded to active 'gemini-3.1-pro-preview'.")
+        return "gemini-3.1-pro-preview"
 
     valid_models = {
         "gemini-3.8-flash": "gemini-3.8-flash",
-        "gemini-3.0-flash": "gemini-3.0-flash",
-        "gemini-2.5-flash": "gemini-2.5-flash",
-        "gemini-2.5-pro": "gemini-2.5-pro",
-        "gemini-1.5-pro": "gemini-1.5-pro",
-        "gemini-1.5-flash": "gemini-1.5-flash",
+        "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
     }
     if requested_model in valid_models:
         return valid_models[requested_model]
+    if "pro" in requested_model.lower():
+        return "gemini-3.1-pro-preview"
     if requested_model.startswith("gemini-"):
         return requested_model
-    if "pro" in requested_model or "flash" in requested_model:
-        return "gemini-3.8-flash"
     return "gemini-3.8-flash"
 
-def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_retries: int = 3) -> Optional[str]:
+def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_retries: int = 4) -> Optional[str]:
     """
     Attempt generation with exponential backoff on transient errors (503, 429, 500, network timeouts).
+    Aborts immediately on non-existent models (404).
     Tries SDK first, then REST API.
     """
+    backoff_delays = [2, 5, 10, 15]
+
     for attempt in range(1, max_retries + 1):
+        backoff_sec = backoff_delays[min(attempt - 1, len(backoff_delays) - 1)]
+
         # 1. Attempt via official google-genai SDK
         try:
             return generate_via_google_genai_sdk(api_key, model_name, prompt)
@@ -315,9 +421,12 @@ def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_ret
             pass  # Fall through to REST API
         except Exception as e:
             err_str = str(e)
+            is_not_found = "404" in err_str or "NOT_FOUND" in err_str
+            if is_not_found:
+                print(f"[WARNING] SDK model '{model_name}' not found (404). Aborting retries.", file=sys.stderr)
+                return None
             is_transient = any(c in err_str for c in ["503", "429", "500", "502", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand"])
             if is_transient and attempt < max_retries:
-                backoff_sec = 2 ** attempt
                 print(f"[WARNING] SDK '{model_name}' transient error ({err_str}). Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
                 time.sleep(backoff_sec)
                 continue
@@ -327,9 +436,11 @@ def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_ret
         try:
             return generate_via_rest_api(api_key, model_name, prompt)
         except urllib.error.HTTPError as he:
+            if he.code == 404:
+                print(f"[WARNING] REST API model '{model_name}' not found (404). Aborting retries.", file=sys.stderr)
+                return None
             is_transient = he.code in [503, 429, 500, 502, 504]
             if is_transient and attempt < max_retries:
-                backoff_sec = 2 ** attempt
                 print(f"[WARNING] REST API '{model_name}' HTTP {he.code}. Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
                 time.sleep(backoff_sec)
                 continue
@@ -337,7 +448,6 @@ def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_ret
             break
         except Exception as e:
             if attempt < max_retries:
-                backoff_sec = 2 ** attempt
                 print(f"[WARNING] REST API '{model_name}' encountered: {e}. Retrying in {backoff_sec}s...", file=sys.stderr)
                 time.sleep(backoff_sec)
                 continue
@@ -349,18 +459,13 @@ def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_ret
 def generate_content_with_resilience(api_key: str, requested_model: str, prompt: str) -> Optional[str]:
     """
     Execute generation with multi-model fallback cascade.
-    If primary model is experiencing high demand (503) or rate limits (429),
-    automatically cascades to alternative active Gemini models.
+    Cascades strictly across active Gemini models (gemini-3.8-flash, gemini-3.1-pro-preview).
     """
     primary = resolve_model_name(requested_model)
     fallback_chain = [
         primary,
         "gemini-3.8-flash",
-        "gemini-3.0-flash",
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
+        "gemini-3.1-pro-preview",
     ]
     # Deduplicate while preserving order
     candidate_models = []
@@ -415,15 +520,19 @@ def main():
 
     if api_key:
         print(f"\n[INFO] GEMINI_API_KEY detected. Starting resilient multi-model dispatch engine...")
-        generated_content = generate_content_with_resilience(api_key, raw_model, prompt) or ""
-        if not generated_content:
+        raw_generated = generate_content_with_resilience(api_key, raw_model, prompt) or ""
+        if raw_generated:
+            generated_content = sanitize_generated_dispatch(raw_generated, series_day, seed, current_date)
+        else:
             print("[WARNING] All candidate Gemini models exhausted. Falling back to deterministic catalog...", file=sys.stderr)
             generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
+            generated_content = sanitize_generated_dispatch(generated_content, series_day, seed, current_date)
     else:
         print("\n[NOTICE] GEMINI_API_KEY environment variable is NOT set.")
         print("[NOTICE] Operating in resilient DRY-RUN / Deterministic high-density architectural blueprint mode.")
         print("[NOTICE] (To enable live Gemini generation, configure GEMINI_API_KEY in repository secrets).")
         generated_content = generate_mock_dispatch(series_day, seed, current_date, past_dispatches, fallback_body)
+        generated_content = sanitize_generated_dispatch(generated_content, series_day, seed, current_date)
 
     # 5. Strict Uniqueness & Collision Verification Gate
     print("\n[VERIFICATION] Executing mathematical & semantic anti-repetition validation...")
@@ -434,6 +543,7 @@ def main():
         print("[RECOVERY] Searching for guaranteed unique non-colliding blueprint from catalog...", file=sys.stderr)
         recovery_seed, recovery_body = bc.get_next_unique_blueprint(series_day, past_dispatches)
         generated_content = generate_mock_dispatch(series_day, recovery_seed, current_date, past_dispatches, recovery_body)
+        generated_content = sanitize_generated_dispatch(generated_content, series_day, recovery_seed, current_date)
         is_unique, reason = uniqueness.verify_dispatch_uniqueness(generated_content, past_dispatches)
         if not is_unique:
             print(f"[ERROR] Critical: Unable to find non-colliding blueprint: {reason}", file=sys.stderr)

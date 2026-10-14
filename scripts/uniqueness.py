@@ -19,7 +19,10 @@ STOP_WORDS = {
     "technology", "stack", "scale", "bottleneck", "lineage", "component",
     "components", "concepts", "involved", "file", "files", "metric", "metrics",
     "alert", "warning", "important", "notice", "dispatch", "true", "false",
-    "none", "class", "def", "return", "self", "import", "from", "print"
+    "none", "class", "def", "return", "self", "import", "from", "print",
+    "visual", "ascii", "topology", "decision", "sequence", "breakdown",
+    "nature", "analogy", "biological", "structural", "parallel", "unit",
+    "test_case", "assert", "self.assert", "classdef", "stroke", "fill"
 }
 
 def extract_tokens(text: str) -> Set[str]:
@@ -27,24 +30,40 @@ def extract_tokens(text: str) -> Set[str]:
     words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
     return {w for w in words if w not in STOP_WORDS}
 
+def extract_dispatch_title(content: str) -> Tuple[int, str]:
+    """
+    Robustly extract the series day number and clean title from markdown content,
+    even if badge links, shields, HTML comments, or blank lines precede the header.
+    """
+    match = re.search(
+        r"#\s*⚡.*?(?:Day\s*(\d+)|Dispatch\s*#?(\d+)):\s*(.+)",
+        content,
+        re.IGNORECASE
+    )
+    if match:
+        day_num = int(match.group(1) or match.group(2))
+        raw_title = match.group(3).strip()
+        # Clean any trailing or embedded markdown link formatting
+        clean_title = re.sub(r"\[.*?\]\(.*?\)", "", raw_title).strip()
+        return day_num, clean_title
+
+    # Fallback: scan lines for the first non-badge heading
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("#") and not line.startswith("# [![") and not line.startswith("[!["):
+            return 0, line.lstrip("#").strip()
+    return 0, ""
+
 def extract_dispatch_metadata(file_path: Path) -> Dict:
     """Extract structured metadata and token fingerprint from a dispatch markdown file."""
     text = file_path.read_text(encoding="utf-8", errors="ignore")
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    first_line = lines[0] if lines else ""
+    day_num, title = extract_dispatch_title(text)
 
-    # Parse title & series day number
-    title_match = re.search(
-        r"#\s*⚡.*?(?:Day\s*(\d+)|Dispatch\s*#?(\d+)):\s*(.+)",
-        first_line,
-        re.IGNORECASE
-    )
-    if title_match:
-        day_num = int(title_match.group(1) or title_match.group(2))
-        title = title_match.group(3).strip()
-    else:
-        day_num = 0
-        title = first_line.lstrip("#").strip()
+    # Fallback to filename day extraction if header lacks day number
+    if day_num == 0:
+        fn_match = re.search(r"day_dispatch_.*?_(\d+)\.md", file_path.name)
+        if fn_match:
+            day_num = int(fn_match.group(1))
 
     # Extract target domain
     domain_match = re.search(r"-\s*\*\*Target Domain:\*\*\s*(.+)", text, re.IGNORECASE)
@@ -130,13 +149,7 @@ def verify_dispatch_uniqueness(
         return True, "No previous dispatches to collide with."
 
     # Parse candidate metadata
-    first_line = candidate_content.splitlines()[0] if candidate_content else ""
-    title_match = re.search(
-        r"#\s*⚡.*?(?:Day\s*(\d+)|Dispatch\s*#?(\d+)):\s*(.+)",
-        first_line,
-        re.IGNORECASE
-    )
-    candidate_title = title_match.group(3).strip() if title_match else first_line.lstrip("#").strip()
+    candidate_day, candidate_title = extract_dispatch_title(candidate_content)
 
     domain_match = re.search(r"-\s*\*\*Target Domain:\*\*\s*(.+)", candidate_content, re.IGNORECASE)
     candidate_domain = domain_match.group(1).strip() if domain_match else ""
