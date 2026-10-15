@@ -56,14 +56,27 @@ class TestDispatchGenerator(unittest.TestCase):
     def test_day_36_generation_uniqueness(self):
         """Verify that Day 36 specifically generates a 100% unique blueprint against all actual dispatches."""
         past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
-        self.assertEqual(len(past), 36)
-        seed, body = gd.bc.get_next_unique_blueprint(36, past)
+        self.assertGreaterEqual(len(past), 36)
+        past_for_36 = [d for d in past if d["day_number"] < 36]
+        seed, body = gd.bc.get_next_unique_blueprint(36, past_for_36)
 
         self.assertEqual(seed["pillar_id"], "D", "Day 36 must belong to Pillar D")
-        content = gd.generate_mock_dispatch(36, seed, "2026-10-14", past, body)
+        content = gd.generate_mock_dispatch(36, seed, "2026-10-14", past_for_36, body)
         sanitized = gd.sanitize_generated_dispatch(content, 36, seed, "2026-10-14")
-        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past)
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past_for_36)
         self.assertTrue(is_unique, f"Day 36 collision: {reason}")
+
+    def test_day_37_generation_uniqueness(self):
+        """Verify that Day 37 specifically generates a 100% unique blueprint against all actual dispatches."""
+        past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
+        self.assertGreaterEqual(len(past), 37)
+        seed, body = gd.bc.get_next_unique_blueprint(37, past)
+
+        self.assertEqual(seed["pillar_id"], "A", "Day 37 must belong to Pillar A")
+        content = gd.generate_mock_dispatch(37, seed, "2026-10-15", past, body)
+        sanitized = gd.sanitize_generated_dispatch(content, 37, seed, "2026-10-15")
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past)
+        self.assertTrue(is_unique, f"Day 37 collision: {reason}")
 
     def test_attempt_model_generation_aborts_immediately_on_404(self):
         """Verify that a 404 NOT_FOUND response aborts immediately without burning retries."""

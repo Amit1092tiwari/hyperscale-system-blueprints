@@ -324,7 +324,52 @@ SEEDS = [
         "badge_color": "red",
         "badge_name": "Threshold%20Ed25519",
     },
-    # Tier 6 (Pillar D6)
+    # Tier 6 (Pillars A6, B6, C6, D6)
+    {
+        "id": "A6",
+        "pillar_id": "A",
+        "domain": "Pillar A: Artificial Intelligence & Machine Learning Engineering (FP8 Quantized GEMM Execution & Dynamic Scaling) [Partition Epoch 6]",
+        "framework": "Transformer Engine FP8 Delayed Scaling with Fused Scaled Matrix Multiply (cuBLASLt & Triton)",
+        "tech_stack": "NVIDIA Transformer Engine, PyTorch, cuBLASLt, Triton IR, OpenLineage",
+        "bottleneck": "Severe numerical underflow and dynamic range collapse during quantized backward pass gradient accumulations",
+        "protocol": "Torch Distributed C10D / NVLink Multi-Node Mesh with Asynchronous Amax Reduction Overlap",
+        "lineage": "OpenLineage tracking FP8 scale factor adjustments, rolling amax history, and gradient overflow frequencies",
+        "components": "Delayed Scaling Amax Tracker, FP8 E4M3/E5M2 Fused Cast Engine, Scaled GEMM Executor",
+        "concepts": "E4M3 vs E5M2 Floating Point Representations, Amax Reduction Overlap, Numerical Quantization Slicing",
+        "title": "Heterogeneous FP8 Scaled GEMM Precision Virtualization and Dynamic Loss Slicing Mesh (Adaptive Hyperscale Epoch 7)",
+        "badge_color": "blue",
+        "badge_name": "FP8%20GEMM%20Engine",
+    },
+    {
+        "id": "B6",
+        "pillar_id": "B",
+        "domain": "Pillar B: Cloud Platform Engineering & DevOps (Encrypted Mesh Tunneling & Hardware Crypto Offload) [Partition Epoch 6]",
+        "framework": "Linux Kernel WireGuard with Userspace WireGuard-RS Polled Queues & Intel QAT Offload",
+        "tech_stack": "WireGuard, Rust tokio, Intel QAT Driver, Prometheus Exporter, OpenLineage",
+        "bottleneck": "CPU core thermal throttling and interrupt storm latency spikes under 100Gbps cross-datacenter encrypted replication",
+        "protocol": "WireGuard UDP Encapsulation (ChaCha20-Poly1305) / NVMe-oF RDMA",
+        "lineage": "OpenTelemetry network traces capturing handshake durations and per-peer transmission throughput",
+        "components": "Polled Mode WireGuard Driver, Intel QAT Crypto Accelerator, Lockless Ring Packet Dispatcher",
+        "concepts": "Zero-Allocation Tunneling, ChaCha20-Poly1305 Offload, Noise Protocol Framework, Core Affinitized Workers",
+        "title": "Userspace WireGuard NVMe Encrypted Tunneling and Hardware Crypto Offload Engine (Adaptive Hyperscale Epoch 6)",
+        "badge_color": "purple",
+        "badge_name": "WireGuard%20Crypto",
+    },
+    {
+        "id": "C6",
+        "pillar_id": "C",
+        "domain": "Pillar C: Enterprise Data Systems & Lakehouses (Vector-Relational Hybrid Slicing & IVFPQ Compaction) [Partition Epoch 6]",
+        "framework": "Lance Columnar Format with Vectorized Inverted File Product Quantization (IVF-PQ) Indexing",
+        "tech_stack": "Lance Format, Rust DataFusion, Apache Arrow, DuckDB, S3/GCS Object Storage, OpenLineage",
+        "bottleneck": "High-dimensional vector indexing latency and lock contention during concurrent petabyte multimodal inserts",
+        "protocol": "Arrow Flight RPC / Lance REST Catalog Protocol",
+        "lineage": "OpenLineage RunEvents auditing vector centroid splits, codebook recalculations, and column slice compaction",
+        "components": "Vectorized Product Quantizer, Centroid Partition Sieve, Arrow Flight Stream Ingester",
+        "concepts": "Columnar Vector Hybrid Layout, Asynchronous IVF Centroid Clustering, Product Quantization Codebooks",
+        "title": "Distributed Lance Columnar Vector-Relational Lakehouse and Asynchronous IVFPQ Compactor (Adaptive Hyperscale Epoch 6)",
+        "badge_color": "teal",
+        "badge_name": "Lance%20Vector%20Lake",
+    },
     {
         "id": "D6",
         "pillar_id": "D",
@@ -339,6 +384,82 @@ SEEDS = [
         "title": "BBS+ Cryptographic Selective Disclosure Signatures and W3C Verifiable Credentials Fabric for Sovereign Genomic EHR (Adaptive Hyperscale Epoch 6)",
         "badge_color": "red",
         "badge_name": "BBS+%20Signatures",
+    },
+    # Tier 7 (Pillar D7)
+    {
+        "id": "D7",
+        "pillar_id": "D",
+        "domain": "Pillar D: High-Security Digital Health & Regulatory Systems (SMPC Beaver Triples & BGW Arithmetic) [Partition Epoch 7]",
+        "framework": "Beaver Triple Arithmetic Secret Sharing over BGW Protocol with Threshold Homomorphic Verification",
+        "tech_stack": "MP-SPDZ, Rust BGW Core, OpenLineage HIPAA Audit Facets, PySyft, libsodium",
+        "bottleneck": "Quadratic network communication rounds and serialization latency during high-order polynomial SMPC multiplications across geo-distributed clinical clusters",
+        "protocol": "gRPC mTLS 1.3 with Secret-Shared Beaver Triple Broadcast Framing",
+        "lineage": "OpenLineage HIPAA audit facets tracking Beaver triple consumption rates and privacy budget dissipation",
+        "components": "Beaver Triple Pre-computation Factory, BGW Shamir Multiplier, Distributed Threshold Verifier",
+        "concepts": "Beaver Multiplication Triples, Ben-Or Goldwasser Wigderson (BGW) Protocol, Shamir Secret Sharing, Homomorphic Verification",
+        "title": "Secure Multi-Party Computation (SMPC) Beaver Triples and BGW Arithmetic Fabric for Sovereign Cohort Studies (Adaptive Hyperscale Epoch 7)",
+        "badge_color": "red",
+        "badge_name": "SMPC%20Triples",
+    },
+    {
+        "id": "A7",
+        "pillar_id": "A",
+        "domain": "Pillar A: Artificial Intelligence & Machine Learning Engineering (Tree-Based Speculative Decoding & Continuous Batching) [Partition Epoch 7]",
+        "framework": "FlashInfer with Tree-Based Speculative Draft Verification (Eagle-2 & Medusa)",
+        "tech_stack": "FlashInfer, PyTorch, vLLM, CUDA Graph, OpenLineage",
+        "bottleneck": "Memory bandwidth saturation during autoregressive decoding and dynamic KV-cache fragmentation",
+        "protocol": "gRPC Streaming / Arrow Flight Tensor Serialization",
+        "lineage": "OpenLineage tracking speculative acceptance ratio, tree verification latency, and KV-cache fragmentation",
+        "components": "Tree-Attention Verification Sieve, Continuous Batching Scheduler, Paged KV-Cache Reclaimer",
+        "concepts": "Tree-Attention Verification, Longest Valid Prefix Selection, Speculative Memory Reclamation",
+        "title": "Decoupled Speculative Multi-Draft Verification and FlashInfer Continuous KV-Slicing Fabric (Adaptive Hyperscale Epoch 7)",
+        "badge_color": "blue",
+        "badge_name": "Speculative%20Decoding",
+    },
+    {
+        "id": "B7",
+        "pillar_id": "B",
+        "domain": "Pillar B: Cloud Platform Engineering & DevOps (Hardware-Offloaded XDP & Flow Director Steering) [Partition Epoch 7]",
+        "framework": "NIC Hardware-Offloaded eBPF XDP with Intel Flow Director Multi-Queue Ingress Steering",
+        "tech_stack": "eBPF, Linux TC, libbpf, Intel ixgbe/ice Driver, Prometheus, OpenLineage",
+        "bottleneck": "Host PCIe bus congestion and CPU cache thrashing during 50M packet/sec DDoS mitigation events",
+        "protocol": "AF_XDP Zero-Copy UMEM / Raw Ethernet Ring Frames",
+        "lineage": "OpenTelemetry kernel telemetry tracking hardware drop counters and RX queue balance entropy",
+        "components": "SmartNIC XDP Bytecode Engine, Flow Director Filter Classifier, UMEM Ring Buffer Pair",
+        "concepts": "Hardware XDP Offload, Symmetric Toeplitz RSS Hashing, Ring Buffer Zero-Copy Splicing, NUMA Pinning",
+        "title": "Multi-Queue XDP Hardware Offload and eBPF Flow Director Steering Mesh (Adaptive Hyperscale Epoch 7)",
+        "badge_color": "purple",
+        "badge_name": "XDP%20Flow%20Director",
+    },
+    {
+        "id": "C7",
+        "pillar_id": "C",
+        "domain": "Pillar C: Enterprise Data Systems & Lakehouses (Vectorized Micro-Clustering & Parquet Page Sifting) [Partition Epoch 7]",
+        "framework": "Apache Iceberg v3 Vectorized File Reader with Bloom Filter Index Sieve & Dynamic Compactor",
+        "tech_stack": "Apache Iceberg, Apache Parquet, DuckDB, PyIceberg, MinIO, OpenLineage",
+        "bottleneck": "Unpruned remote object metadata lookups and cold page read amplification during point query bursts",
+        "protocol": "Arrow IPC Stream Protocol / S3 REST API",
+        "lineage": "OpenLineage execution facets tracking Parquet page skips and vectorized dictionary decode speeds",
+        "components": "Vectorized Page-Index Evaluator, Split-Block Bloom Filter Sieve, Compact Micro-Cluster Worker",
+        "concepts": "Parquet Page-Index Vector Pruning, Split-Block Bloom Sifting, Asynchronous Segment Compaction",
+        "title": "Vectorized Parquet Micro-Clustering and Asynchronous Delta Bloom Filter Sieve Engine (Adaptive Hyperscale Epoch 7)",
+        "badge_color": "teal",
+        "badge_name": "Parquet%20Bloom%20Sieve",
+    },
+    {
+        "id": "D8",
+        "pillar_id": "D",
+        "domain": "Pillar D: High-Security Digital Health & Regulatory Systems (Hardware Enclaved TFHE Torus Bootstrapping) [Partition Epoch 8]",
+        "framework": "TFHE Torus Fully Homomorphic Encryption with Hardware-Enclaved Gate Bootstrapping",
+        "tech_stack": "TFHE-rs, Concrete, Intel SGX / AMD SEV-SNP, gRPC, OpenLineage HIPAA Audit Facets",
+        "bottleneck": "Slow cryptographic bootstrapping noise clearing and ring polynomial multiplications during private genomic sequence matching",
+        "protocol": "gRPC mTLS 1.3 with Encrypted Torus Polynomial Ciphertext Frames",
+        "lineage": "OpenLineage HIPAA audit facets tracking homomorphic noise variance and bootstrapping gate evaluations",
+        "components": "Torus Gate Bootstrapper, Blind Rotation Evaluator, Hardware Enclave Polynomial ALU",
+        "concepts": "Torus Fully Homomorphic Encryption (TFHE), Programmable Bootstrapping, Blind Polynomial Rotation, Noise Floor Reset",
+        "title": "Hardware-Enclaved Fully Homomorphic Encryption (FHE) TFHE Torus Bootstrapping Fabric for Genomic Splicing (Adaptive Hyperscale Epoch 8)",
+        "badge_color": "red",
+        "badge_name": "TFHE%20Homomorphic",
     },
 ]
 
@@ -465,42 +586,134 @@ PILLAR_METADATA = {
     "A": {
         "analogy_system": "Ant Colony Stigmergic Optimization and Pheromone Route Splicing",
         "analogy_text": "In leafcutter ant foraging columns, individual workers lay down volatile hydrocarbon trails. Local encounters and evaporative decay reinforce optimal topological paths between nesting vaults and canopy harvest zones without a centralized queen issuing routing schedules. When an obstacle emerges, negative feedback loops rapidly prune congested branches, redirecting worker flow with zero scheduling latency.",
-        "test_class": "DistributedTensorSchedulerHarness",
+        "test_class": "TensorParallelEngineCore",
+        "test_ingest": "shard_tensor_slice",
+        "test_process": "allreduce_gradient_step",
+        "test_unit": "tensors",
         "kpi_name": "Gradient Synchronization Overhead",
         "kpi_id": "grad_sync_latency_us",
+        "kpi_desc": "Measures total end-to-end barrier delay across all GPU accelerators during distributed all-reduce parameter synchronization. Strict SLA requires < 25.0us.",
+        "kpi2_name": "KV-Cache Block Eviction Velocity",
+        "kpi2_id": "kv_cache_eviction_velocity_ops_sec",
+        "kpi2_desc": "Tracks asynchronous memory block recycling rate for paged attention tables under burst autoregressive token generation.",
+        "kpi3_name": "Model FLOP Utilization Ratio",
+        "kpi3_id": "mfu_hardware_efficiency_pct",
+        "kpi3_desc": "Real-time accelerator compute saturation tracking sustained GEMM throughput versus theoretical hardware maximum.",
         "failure_name": "All-to-All Transport Straggler",
         "failure_cause": "PCIe lane contention or GPU thermal throttling causing collective all-gather desynchronization.",
+        "failure_blast": "Inter-node barrier stall and idle compute bubbles across all connected GPU worker ranks.",
         "failure_mitigation": "Asynchronous non-blocking NCCL stream splicing with dynamic straggler backup worker migration.",
+        "fail2_name": "High-Bandwidth Memory (HBM) Allocation Spike",
+        "fail2_cause": "Dynamic sequence length expansion exceeding allocated paged attention blocks.",
+        "fail2_blast": "CUDA Out-Of-Memory (OOM) fatal exception terminating training run.",
+        "fail2_mit": "Pre-emptive chunked prefill tensor slicing with opportunistic host RAM offloading.",
+        "fail3_name": "FP8 Gradient Numerical Underflow",
+        "fail3_cause": "Amax delayed scaling underestimating sudden gradient magnitude spikes during backward pass.",
+        "fail3_blast": "Zeroed gradient updates causing training divergence or loss plateauing.",
+        "fail3_mit": "Dynamic amax history window clipping and automatic FP16 precision fallback.",
+        "problem_p1": "High-throughput machine learning workloads operating across distributed accelerator meshes frequently encounter extreme gradient synchronization overhead and memory bloat. Standard all-reduce collectives introduce inter-GPU synchronization barriers where compute units sit idle waiting for cross-node parameter exchange.",
+        "problem_p2": "Without specialized tensor-parallel slicing and asynchronous memory offloading, multi-billion parameter model training pipelines suffer severe compute bubbles, saturating High-Bandwidth Memory (HBM) and inducing catastrophic numerical underflow during backward passes.",
+        "quote_body": "In large-scale AI systems engineering, mathematical purity must yield to hardware reality: cache line alignment, arithmetic intensity, and zero-bubble communication scheduling are what truly govern convergence at scale.",
+        "quote_author": "Principal AI Systems Architect & Deep Learning Infrastructure Fellow",
     },
     "B": {
         "analogy_system": "Cephalopod Chromatophore Selective Pigment Modulation",
         "analogy_text": "Deep-sea cephalopods navigate predator-dense pelagic depths using multi-layer dermal chromatophores and iridophores. Rather than broadcasting full systemic metabolic states, radial motor neurons contract selective pigment sacs to display contextual camouflage wavelengths, shielding internal physiological vitality while projecting verified luminescent signals to conspecifics.",
-        "test_class": "KernelRingBufferPacketHarness",
+        "test_class": "KernelBypassEngineCore",
+        "test_ingest": "enqueue_packet_burst",
+        "test_process": "poll_rx_ring",
+        "test_unit": "frames",
         "kpi_name": "Ingress Splicing Jitter",
         "kpi_id": "ingress_splicing_jitter_ns",
+        "kpi_desc": "Measures line-rate packet dispatch jitter across kernel-bypass polled mode memory queues. Target baseline requires strictly < 15.0ns.",
+        "kpi2_name": "Zero-Copy Ring Fill Ratio",
+        "kpi2_id": "zero_copy_ring_fill_pct",
+        "kpi2_desc": "Measures lockless ring buffer utilization percentage. Sustained saturation above 75% triggers proactive ring capacity doubling.",
+        "kpi3_name": "Wire-Speed PMD Throughput",
+        "kpi3_id": "pmd_wire_speed_packets_sec",
+        "kpi3_desc": "Real-time packet processing throughput sustained across NUMA-pinned hardware poll mode driver cores.",
         "failure_name": "Ring Buffer Overrun Cascade",
         "failure_cause": "Line-rate burst saturation exceeding memory page pool descriptors before kernel thread wake.",
+        "failure_blast": "Ingress thread blockage and dropped transaction payloads.",
         "failure_mitigation": "Lockless single-producer single-consumer ring queues with NUMA-pinned user-space polling.",
+        "fail2_name": "PCIe Bus TLB Invalidation Thrashing",
+        "fail2_cause": "Frequent unpinned virtual memory remappings under high-throughput DMA transfers.",
+        "fail2_blast": "PCIe bus latency multiplication and memory controller saturation.",
+        "fail2_mit": "Static 1GB hugepage memory pre-allocation with locked virtual address translation.",
+        "fail3_name": "Interrupt Storm Core Starvation",
+        "fail3_cause": "Transient NIC hardware interrupt spikes interrupting user-space polled mode threads.",
+        "fail3_blast": "Thread context-switch overhead inducing microsecond tail latency jitter.",
+        "fail3_mit": "Complete kernel interrupt masking with dedicated CPU core isolation via isolcpus.",
+        "problem_p1": "Low-latency cloud-native microservices and networking topologies encounter severe operating system overhead when scaling to millions of concurrent socket connections. Standard Linux kernel socket buffers and interrupt handlers trigger excessive CPU context switches and softirq lock thrashing.",
+        "problem_p2": "By eliminating OS kernel overhead via lockless ring buffers and polled mode execution drivers, the infrastructure delivers deterministic sub-microsecond packet delivery while maintaining strict hardware isolation and multi-tenant resource fairness.",
+        "quote_body": "True platform resilience is achieved when the operating system kernel is bypassed for the high-velocity data path and reserved strictly for control plane orchestration.",
+        "quote_author": "Principal Cloud Infrastructure Architect & Systems Performance Director",
     },
     "C": {
         "analogy_system": "Alluvial River Delta Silt Sorting and Hydrodynamic Meander Slicing",
         "analogy_text": "In braided river deltas, sediment-laden currents encounter dynamic gravel bars and distributary channels. Dense gravels and quartz sands settle rapidly in high-energy spillways, while fine silts and organic clays stay suspended until reaching low-energy estuaries. This natural hydraulic classification partitions particle volumes continuously without mechanical sieves or upstream staging dams.",
-        "test_class": "VectorizedLakehouseCompactorHarness",
+        "test_class": "ColumnarLakehouseEngineCore",
+        "test_ingest": "append_record_batch",
+        "test_process": "compact_micro_partitions",
+        "test_unit": "records",
         "kpi_name": "Columnar Partition Compaction Speed",
         "kpi_id": "columnar_partition_compaction_mb_sec",
+        "kpi_desc": "Measures asynchronous Parquet micro-cluster compaction throughput. Sustained production SLA requires >= 2000 MB/sec.",
+        "kpi2_name": "Split-Block Bloom Pruning Ratio",
+        "kpi2_id": "bloom_prune_efficiency_pct",
+        "kpi2_desc": "Percentage of remote cloud storage GET operations eliminated via split-block Bloom filter negative index evaluation.",
+        "kpi3_name": "Vectorized RecordBatch Scan Velocity",
+        "kpi3_id": "parquet_page_scan_rate_rows_sec",
+        "kpi3_desc": "Vectorized column decode speed into Apache Arrow memory batches across columnar readers.",
         "failure_name": "Metadata Manifest Split Contention",
         "failure_cause": "Concurrent writer commit collisions attempting atomic snapshot CAS transitions on remote storage.",
+        "failure_blast": "Optimistic concurrency control commit rollbacks and writer pipeline retries.",
         "failure_mitigation": "Vectorized bloom filter negative pushdown with decoupled manifest log compaction.",
+        "fail2_name": "Split-Block Bloom Bitset Saturation",
+        "fail2_cause": "Secondary key cardinality outgrowing pre-allocated 32-byte split-block bitset limits.",
+        "fail2_blast": "Elevated false positive rate reverting engine to expensive full object scans.",
+        "fail2_mit": "Dynamic page-index partitioning with adaptive bitset reallocation during compaction.",
+        "fail3_name": "Remote Object Storage 503 SlowDown",
+        "fail3_cause": "Analytical query burst issuing excessive unpruned GET requests against a single object key prefix.",
+        "fail3_blast": "Distributed query planner thread stalls and cascading query timeouts.",
+        "fail3_mit": "High-entropy MD5 key prefix hashing combined with local SSD byte-range caching.",
+        "problem_p1": "Petabyte-scale analytical data lakehouses encounter severe write amplification and query planning delays when streaming micro-batches collide with read-heavy analytical scans. Generating uncompacted Parquet fragments exhausts remote object storage metadata request quotas.",
+        "problem_p2": "Implementing decoupled columnar clustering and asynchronous compaction allows analytical engines to scan vectorized partitions with sub-second latency, avoiding expensive file tree traversals and eliminating remote storage read stalls.",
+        "quote_body": "A distributed data lakehouse is only as performant as its compaction strategy: write immediately with zero coordination, and let asynchronous algebraic clustering organize the storage layout in the background.",
+        "quote_author": "Principal Data Lakehouse Architect & Distributed Query Director",
     },
     "D": {
         "analogy_system": "Adaptive Immune System V(D)J Genetic Recombination and Clonal Selection",
         "analogy_text": "Human B-lymphocytes generate diverse antibody repertoires through somatic recombination of Variable (V), Diversity (D), and Joining (J) gene segments. When a novel viral epitope enters peripheral lymphatic tissue, receptor editing and clonal deletion eradicate self-reactive cells while amplifying high-affinity paratopes, maintaining systemic immunity without exposing germline genetic reserves to pathological tampering.",
-        "test_class": "CryptographicEnclaveAttestationHarness",
+        "test_class": "CryptographicEnclaveEngineCore",
+        "test_ingest": "load_secret_share",
+        "test_process": "evaluate_arithmetic_gate",
+        "test_unit": "shares",
         "kpi_name": "Pairing Attestation Latency",
         "kpi_id": "pairing_attestation_latency_us",
+        "kpi_desc": "Measures cryptographic bilinear pairing or enclave attestation latency for sovereign health record access. SLA requires < 45.0us.",
+        "kpi2_name": "Torus Noise Variance Floor",
+        "kpi2_id": "homomorphic_noise_variance_sigma",
+        "kpi2_desc": "Tracks accumulated error variance across homomorphic arithmetic gates to prevent bit-flip decryption errors.",
+        "kpi3_name": "Zero-Knowledge Witness Evaluation Speed",
+        "kpi3_id": "zkp_verification_speed_proofs_sec",
+        "kpi3_desc": "Throughput of selective disclosure and cryptographic proof verifications inside secure enclave execution environments.",
         "failure_name": "Byzantine Enclave Replay Attempt",
         "failure_cause": "Stale attestation ticket retransmitted across unauthenticated inter-enclave gRPC endpoints.",
+        "failure_blast": "Unauthorized access attempt to sovereign patient clinical telemetry records.",
         "failure_mitigation": "Context-bound ephemeral nonces derived from mutual TLS session handshake keys.",
+        "fail2_name": "Torus Noise Overflow Bit-Flip",
+        "fail2_cause": "Excessive homomorphic gate depth without intervening programmable bootstrapping execution.",
+        "fail2_blast": "Decryption noise boundary exceeded, corrupting private clinical genomic results.",
+        "fail2_mit": "Static circuit analysis compiler enforcing mandatory bootstrapping gate insertion.",
+        "fail3_name": "Enclave Page Cache (EPC) Swapping Stall",
+        "fail3_cause": "Cryptographic key matrices exceeding hardware encrypted memory cache boundaries.",
+        "fail3_blast": "Severe 100x execution slowdown due to hardware memory re-encryption paging.",
+        "fail3_mit": "Zero-copy enclave memory mapping with NUMA-local hugepage backing.",
+        "problem_p1": "Regulatory compliance and data sovereign boundaries in high-security healthcare systems require mathematical privacy guarantees without compromising multi-institutional analytical utility. Centralizing plaintext patient telemetry exposes confidential health records to catastrophic exfiltration.",
+        "problem_p2": "By leveraging zero-knowledge proofs, hardware enclaves, and verifiable secret sharing, sovereign entities compute joint statistical aggregations while maintaining complete mathematical non-disclosure over raw clinical records.",
+        "quote_body": "Cryptographic security is not an obstacle to enterprise collaboration; it is the mathematical foundation that allows sovereign organizations to discover collective truth without surrendering data custody.",
+        "quote_author": "Principal Cryptographic Architect & Sovereign Systems Fellow",
     },
 }
 
@@ -527,18 +740,44 @@ def synthesize_procedural_blueprint_body(seed: Dict) -> str:
     test_cls = f"{meta['test_class']}_{seed.get('id', 'Seed')}"
     kpi_name = meta["kpi_name"]
     kpi_id = meta["kpi_id"]
+    kpi_desc = meta.get("kpi_desc", "Measures total end-to-end processing duration from arrival at ingress queue to successful commitment.")
+    kpi2_name = meta.get("kpi2_name", "Buffer Saturation Ratio")
+    kpi2_id = meta.get("kpi2_id", "buffer_saturation_ratio_pct")
+    kpi2_desc = meta.get("kpi2_desc", "Measures resource utilization percentage.")
+    kpi3_name = meta.get("kpi3_name", "Throughput Velocity")
+    kpi3_id = meta.get("kpi3_id", "throughput_velocity_units_sec")
+    kpi3_desc = meta.get("kpi3_desc", "Real-time record commitments per second.")
+
     fail_name = meta["failure_name"]
     fail_cause = meta["failure_cause"]
+    fail_blast = meta.get("failure_blast", "Ingestion thread blockage and dropped transaction payloads.")
     fail_mit = meta["failure_mitigation"]
+    fail2_name = meta.get("fail2_name", "Lock Contention Under Thread Spikes")
+    fail2_cause = meta.get("fail2_cause", "Concurrent workers attempting synchronized queue read locks.")
+    fail2_blast = meta.get("fail2_blast", "CPU scheduling churn and tail latency amplification.")
+    fail2_mit = meta.get("fail2_mit", "Per-core single-producer single-consumer (SPSC) ring isolation with NUMA affinity.")
+    fail3_name = meta.get("fail3_name", "Lineage Emission Timeout")
+    fail3_cause = meta.get("fail3_cause", "Remote audit broker temporarily unreachable.")
+    fail3_blast = meta.get("fail3_blast", "Stalled commit pipeline due to synchronous compliance logging.")
+    fail3_mit = meta.get("fail3_mit", "Asynchronous local ring buffer spooling with background flush workers.")
+
+    problem_p1 = meta["problem_p1"]
+    problem_p2 = meta["problem_p2"]
+    quote_body = meta["quote_body"]
+    quote_author = meta["quote_author"]
+
+    test_ingest = meta.get("test_ingest", "ingest_record")
+    test_process = meta.get("test_process", "process_batch")
+    test_unit = meta.get("test_unit", "items")
 
     return f"""## 2. Problem Statement
 
 > [!WARNING]
 > **The Critical Systems Bottleneck:** {bottleneck}. In high-throughput distributed environments, naive implementations fail under extreme concurrency bursts, causing thread starvation, cascading tail latency amplification, and catastrophic pipeline degradation.
 
-Enterprise infrastructure supporting {domain} requires sustained operational resilience without incurring excessive CPU-to-memory round-trips or serialization bottlenecks. When scaling beyond standard commodity nodes, traditional architectures encounter strict physical limits. Memory buses saturate, context switches monopolize scheduling queues, and distributed coordination roundtrips induce severe pipeline bubbles.
+{problem_p1} Supporting {domain} demands sustained operational resilience and predictable latencies without saturating interconnects or incurring serialization penalties.
 
-Standard out-of-the-box components lack the low-level optimizations required for zero-copy streaming, vectorized memory mapping, and asynchronous coordination. Without an end-to-end framework leveraging {framework}, production workloads inevitably experience severe throughput degradation, unrecoverable resource contention, and operational compliance failures.
+{problem_p2} Integrating {framework} provides the structural foundation to eliminate memory thrashing, maintain mathematical invariants, and achieve deterministic line-rate execution.
 
 ---
 
@@ -758,13 +997,13 @@ class {test_cls}:
         self.buffer: List[Dict[str, Any]] = []
         self.processed_count = 0
 
-    def ingest_record(self, record_id: str, payload_size_bytes: int) -> bool:
+    def {test_ingest}(self, item_id: str, payload_size_bytes: int) -> bool:
         if len(self.buffer) >= self.capacity:
             return False
-        self.buffer.append({{"id": record_id, "size": payload_size_bytes, "ts": time.time()}})
+        self.buffer.append({{"id": item_id, "size": payload_size_bytes, "ts": time.time()}})
         return True
 
-    def process_batch(self, batch_size: int = 100) -> int:
+    def {test_process}(self, batch_size: int = 100) -> int:
         batch = self.buffer[:batch_size]
         self.buffer = self.buffer[batch_size:]
         self.processed_count += len(batch)
@@ -774,24 +1013,24 @@ class Test{pillar_id}Engine(unittest.TestCase):
     def setUp(self):
         self.engine = {test_cls}(capacity=500)
 
-    def test_ingest_and_capacity_bounds(self):
+    def test_{test_ingest}_bounds(self):
         for i in range(500):
-            self.assertTrue(self.engine.ingest_record(f"rec_{{i}}", 1024))
+            self.assertTrue(self.engine.{test_ingest}(f"{test_unit}_{{i}}", 1024))
         # Exceeding capacity must trigger backpressure
-        self.assertFalse(self.engine.ingest_record("rec_overflow", 1024))
+        self.assertFalse(self.engine.{test_ingest}("{test_unit}_overflow", 1024))
 
-    def test_batch_processing_correctness(self):
+    def test_{test_process}_correctness(self):
         for i in range(150):
-            self.engine.ingest_record(f"item_{{i}}", 512)
-        processed = self.engine.process_batch(100)
+            self.engine.{test_ingest}(f"work_{{i}}", 512)
+        processed = self.engine.{test_process}(100)
         self.assertEqual(processed, 100)
         self.assertEqual(len(self.engine.buffer), 50)
         self.assertEqual(self.engine.processed_count, 100)
 
-    def test_engine_drain(self):
+    def test_{test_unit}_drain(self):
         for i in range(50):
-            self.engine.ingest_record(f"item_{{i}}", 256)
-        processed = self.engine.process_batch(100)
+            self.engine.{test_ingest}(f"work_{{i}}", 256)
+        processed = self.engine.{test_process}(100)
         self.assertEqual(processed, 50)
         self.assertEqual(len(self.engine.buffer), 0)
 
@@ -804,13 +1043,13 @@ if __name__ == "__main__":
 ## 8. KPI Monitoring Framework
 
 • **{kpi_name}** (`{kpi_id}`):
-	• Why: Measures total end-to-end processing duration from arrival at ingress queue to successful commitment. Baseline threshold is strictly < 20.0ms.
+	• Why: {kpi_desc}
 
-• **Ring Buffer Backpressure Ratio** (`buffer_backpressure_ratio_pct`):
-	• Why: Measures the percentage of ingestion operations rejected due to queue saturation. Sustained non-zero ratios indicate downstream thread starvation.
+• **{kpi2_name}** (`{kpi2_id}`):
+	• Why: {kpi2_desc}
 
-• **Transformation Throughput Rate** (`transform_throughput_records_sec`):
-	• Why: Real-time telemetry tracking record commitments per second. Significant deviations (> 25% drop) trigger automated horizontal worker scaling.
+• **{kpi3_name}** (`{kpi3_id}`):
+	• Why: {kpi3_desc}
 
 ---
 
@@ -818,17 +1057,17 @@ if __name__ == "__main__":
 
 | Failure Vector | Technical Root Cause | System Blast Radius | Production Mitigation Pattern |
 | :--- | :--- | :--- | :--- |
-| 🔴 **{fail_name}** | {fail_cause} | Ingestion thread blockage and dropped transaction payloads. | {fail_mit} |
-| 🟡 **Lock Contention Under Thread Spikes** | Concurrent workers attempting synchronized queue read locks. | CPU scheduling churn and tail latency amplification. | Per-core single-producer single-consumer (SPSC) ring isolation with NUMA affinity. |
-| 🟠 **Lineage Emission Timeout** | Remote audit broker temporarily unreachable. | Stalled commit pipeline due to synchronous compliance logging. | Asynchronous local ring buffer spooling with background flush workers. |
+| 🔴 **{fail_name}** | {fail_cause} | {fail_blast} | {fail_mit} |
+| 🟡 **{fail2_name}** | {fail2_cause} | {fail2_blast} | {fail2_mit} |
+| 🟠 **{fail3_name}** | {fail3_cause} | {fail3_blast} | {fail3_mit} |
 
 ---
 
 ## 10. Thoughtful Wisdom Words
 
-> *"Architecture is never about adding complexity to solve scale; it is about ruthlessly eliminating unnecessary layers between data and execution. When your system operates in harmony with hardware cache hierarchies, network boundaries, and lock-free concurrency, scale ceases to be a challenge and becomes the natural consequence of disciplined design."*
+> *"{quote_body}"*
 > 
-> — **Principal Systems Architect & Platform Engineering Director**
+> — **{quote_author}**
 """
 
 def load_blueprint_body(blueprint_id: str, seed: Optional[Dict] = None) -> str:
@@ -919,18 +1158,44 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
                     return candidate_seed, body
 
     # 3. Dynamic fail-safe: synthesize with distinct salt to guarantee 100% uniqueness
+    FAILSAFE_THEMES = {
+        "A": [
+            ("Decoupled Speculative Verification Engine", "Dynamic Attention Speculation & Paged Tensor Pools", "FlashInfer Tree-Based Speculative Sieve"),
+            ("Asynchronous Tensor-Parallel Loss Optimizer", "Tensor-Parallel Loss Slicing & Rescaling Mesh", "Megatron Fused Softmax Cross-Entropy"),
+            ("Heterogeneous Low-Precision Quantization Matrix", "Quantization Outlier Suppression Mesh", "SmoothQuant Int8 Virtualization Sieve"),
+        ],
+        "B": [
+            ("Kernel-Bypass Polled Ingress Reactor", "Kernel-Bypass Polled Ingress Queues", "DPDK PMD Zero-Copy Memory Splicer"),
+            ("Hardware-Offloaded eBPF Flow Director Mesh", "Hardware-Attested Flow Classification", "Cilium eBPF XDP Hardware Classifier"),
+            ("Distributed io_uring Socket Multiplexer", "io_uring Multi-Queue Socket Concurrency", "Linux Kernel io_uring SQPOLL Engine"),
+        ],
+        "C": [
+            ("Vectorized Columnar Storage Pruning Engine", "Columnar Pruning & Micro-Partitions", "Arrow DataFusion Distributed Query Core"),
+            ("Zero-Copy Delta Streaming Ingestion Sieve", "Delta Stream Ingestion & Parquet Splicing", "Apache Iceberg Vectorized Split Reader"),
+            ("Distributed Columnar Metadata Compactor", "Columnar Metadata Index Acceleration", "DuckDB In-Memory Partition Engine"),
+        ],
+        "D": [
+            ("Zero-Knowledge Cryptographic Witness Verifier", "ZK Witness Generation & Audit Verification", "Halo2 Polynomial Commitment Verifier"),
+            ("Hardware-Enclaved Sovereign Identity Mesh", "Sovereign Confidential Computing Enclaves", "AMD SEV-SNP Hardware Memory Attestation"),
+            ("Verifiable Multi-Party Threshold Attestation Core", "Verifiable Threshold Signatures & Ledger", "FROST Schnorr Threshold Signer Engine"),
+        ],
+    }
+
     for salt_idx in range(50):
         salt_epoch = epoch_count + salt_idx
+        themes = FAILSAFE_THEMES.get(target_pillar, FAILSAFE_THEMES["A"])
+        theme_title, theme_domain, theme_framework = themes[salt_idx % len(themes)]
+
         fail_safe_seed = {
             "id": f"{target_pillar}_adaptive_{series_day}_{salt_idx}",
             "pillar_id": target_pillar,
-            "title": f"Autonomous Hyperscale Vector Execution Engine for {target_pillar} (Adaptive Day {series_day} Epoch {salt_epoch})",
-            "domain": f"Pillar {target_pillar}: Adaptive Hyperscale Infrastructure [Series Day {series_day} Epoch {salt_epoch}]",
-            "framework": f"Hyperscale Vector Engine v{salt_epoch}.{salt_idx} with Zero-Copy Streaming Pipeline",
-            "tech_stack": "Distributed Vector Engine, OpenLineage, GitHub Actions CI",
-            "bottleneck": f"Cross-cluster latency and queue contention under Series Day {series_day} Epoch {salt_epoch} workloads",
-            "protocol": "Zero-Copy RPC / Arrow Flight IPC Protocol",
-            "lineage": f"OpenLineage execution audit facets recording adaptive run parameters for Epoch {salt_epoch}",
+            "title": f"{theme_title} for Architecture Tier {target_pillar} (Adaptive Series Day {series_day} Iteration {salt_idx + 1})",
+            "domain": f"Pillar {target_pillar}: {theme_domain} [Series Day {series_day} Epoch {salt_epoch}]",
+            "framework": f"{theme_framework} v{salt_epoch}.{salt_idx}",
+            "tech_stack": "Distributed Systems Core, OpenLineage Facets, GitHub Actions CI",
+            "bottleneck": f"Inter-node synchronization latency and queue contention under Series Day {series_day} Iteration {salt_idx + 1} workloads",
+            "protocol": "Zero-Copy RPC / Arrow Flight Protocol",
+            "lineage": f"OpenLineage execution audit facets recording adaptive run parameters for Iteration {salt_idx + 1}",
             "components": "Vector Sieve, Asynchronous Ring Allocator, Local Validation Mock",
             "concepts": "Zero-Copy Memory Mapping, Lock-Free Rings, Vectorized Execution, Adaptive Slicing",
             "badge_color": "blue" if target_pillar == "A" else ("purple" if target_pillar == "B" else ("teal" if target_pillar == "C" else "red")),
