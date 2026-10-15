@@ -117,12 +117,40 @@ Simplicity and purity in zero-allocation designs preserve determinism.
         remediated, findings, fixes = tr.review_and_fix_dispatch(self.sample_valid_dispatch, "day_dispatch_test.md")
         self.assertEqual(findings, [])
         self.assertEqual(fixes, [])
-        self.assertIn("Dispatch Technical Review & Completeness Audit", remediated)
+        self.assertIn("Senior Peer Review & Systems Architecture Audit", remediated)
+        self.assertIn("- **Reviewing Architect:**", remediated)
+        self.assertIn("Principal Systems Architect", remediated)
         self.assertIn("- **Completeness Status:** Complete / Verified (10/10 Sections Verified)", remediated)
-        self.assertIn("- [x] 10-Section Architecture Completeness Verified", remediated)
-        self.assertIn("- [x] Python AST Syntax & Execution Compilation Verified", remediated)
+        self.assertIn("- **Architectural Evaluation Matrix:**", remediated)
+        self.assertIn("- **Senior Peer Architectural Critique:**", remediated)
         self.assertIn("- **Unique Flag:** `true`", remediated)
+
+    def test_senior_peer_evaluation_domains(self):
+        meta_b = {"pillar": "B", "title": "WireGuard NVMe Offload"}
+        eval_b = tr.evaluate_senior_peer_architecture("wireguard qat nvme", meta_b)
+        self.assertIn("Linux Kernel-Bypass Networking", eval_b["focus_areas"])
+        self.assertIn("Low-Latency Hardware Offload", eval_b["focus_areas"])
+        self.assertIn("ksoftirqd", eval_b["critique"])
+
+        meta_a = {"pillar": "A", "title": "FP8 Quantized GEMM"}
+        eval_a = tr.evaluate_senior_peer_architecture("fp8 tensor gemm", meta_a)
+        self.assertIn("Tensor Virtualization", eval_a["focus_areas"])
+        self.assertIn("amax", eval_a["critique"])
+
+    def test_fix_wireguard_hardware_ring_software_fallback(self):
+        flawed = 'if not self.accel.submit_transform(desc):\n            raise BufferError("Hardware accelerator ring full; throttling required.")'
+        fixed, fixes = tr.fix_wireguard_cryptographic_defects(flawed)
+        self.assertIn("_execute_software_fallback_encrypt", fixed)
+        self.assertNotIn("BufferError", fixed)
+        self.assertIn("Implemented in-process AVX-512 SIMD software fallback on hardware offload ring saturation", fixes)
+
+    def test_fix_wireguard_counter_window_size_injection(self):
+        flawed = "class AntiReplayWindow:\n    def __init__(self, window_size: int = 64) -> None:\n"
+        fixed, fixes = tr.fix_wireguard_cryptographic_defects(flawed)
+        self.assertIn("COUNTER_WINDOW_SIZE: int = 2048", fixed)
+        self.assertTrue(any("2048" in f for f in fixes))
 
 
 if __name__ == "__main__":
     unittest.main()
+

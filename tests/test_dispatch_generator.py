@@ -284,7 +284,7 @@ x = 1
 
         reviewed_content, findings, fixes = gd.technical_reviewer.review_and_fix_dispatch(sanitized, "day_dispatch_test.md")
         self.assertEqual(findings, [])
-        self.assertIn("Dispatch Technical Review & Completeness Audit", reviewed_content)
+        self.assertIn("Senior Peer Review & Systems Architecture Audit", reviewed_content)
         self.assertIn("Complete / Verified (10/10 Sections Verified)", reviewed_content)
 
 
