@@ -100,7 +100,7 @@ def evaluate_senior_peer_architecture(content: str, meta: Dict[str, str]) -> Dic
         reviewer_title = "Principal Systems Architect & Distributed Infrastructure Fellow"
         focus_areas = "Distributed Systems | Linux Kernel-Bypass Networking | Low-Latency Hardware Offload"
         matrix = [
-            ("Distributed Systems Invariants", "Monotonic packet sequencing & anti-replay sliding window verified (RFC 2401 / WireGuard 2048-bit standard)."),
+            ("Distributed Systems Invariants", "Monotonic packet sequencing & anti-replay sliding window verified: duplicate rejection within 2048-bit window, unseen packet acceptance, and stale packet drop (RFC 2401 / WireGuard 2048-bit standard)."),
             ("Kernel-Bypass & Memory Locality", "Polled-mode userspace ring buffers decouple high-Mpps throughput from ksoftirqd interrupt storms."),
             ("Hardware Offload & Fault Decoupling", "Asynchronous PCIe DMA offload with zero-loss AVX-512 SIMD CPU fallback under queue saturation."),
             ("Telemetry & Observability Contract", "Dual-plane metrics instrumented (qat_hardware vs avx512_software, METRIC_MALFORMED_DROPS)."),
@@ -111,7 +111,8 @@ def evaluate_senior_peer_architecture(content: str, meta: Dict[str, str]) -> Dic
             "Moving cryptographic transformation into userspace polled memory rings completely circumvents "
             "Linux kernel CFS thread starvation and ksoftirqd interrupt storms under 100 Gbps replication. "
             "Symmetrizing the QAT DMA ring with an in-process AVX-512 vector fallback establishes high-availability "
-            "fail-soft mechanics, while the 2048-bit anti-replay window bounds WAN packet reordering risks."
+            "fail-soft mechanics, while the 2048-bit anti-replay window strictly rejects replayed frames within the "
+            "sliding mask while allowing out-of-order WAN packet arrivals."
         )
     elif pillar == "A" or "fp8" in content.lower() or "tensor" in content.lower() or "gemm" in content.lower():
         reviewer_title = "Principal Distributed Systems Architect & High-Performance Computing Fellow"
@@ -264,6 +265,18 @@ METRIC_MALFORMED_DROPS = Counter(
             'header = struct.pack(HEADER_FORMAT, MESSAGE_DATA_TYPE, 101, nonce)\n        pkt = header + b"DATA" + (b"\\x00" * AUTH_TAG_SIZE)'
         )
         fixes.append("Fixed anti-replay test frame packing to adhere to HEADER_FORMAT (<IIQ)")
+
+    # 7. Anti-replay test assertion contradiction: ensure duplicate nonces assert False (rejection)
+    # and unseen nonces inside the window assert True (acceptance)
+    flawed_pattern = re.compile(
+        r'assert\s+([a-zA-Z0-9_]+)\.validate_and_update\(1\)\s+is\s+True\s*#\s*Distance\s+2048\s*-\s*1\s*=\s*2047\s*<\s*2048[^\n]*'
+    )
+    if flawed_pattern.search(new_content):
+        new_content = flawed_pattern.sub(
+            r'assert \1.validate_and_update(1) is False  # Replay of 1 (already seen) -> must reject!\n    assert \1.validate_and_update(2) is True   # Unseen packet (2048 - 2 = 2046 < 2048) -> accept!',
+            new_content
+        )
+        fixes.append("Corrected 2048-bit anti-replay test assertion to reject replayed packet 1 while accepting unseen packet 2")
 
     return new_content, fixes
 

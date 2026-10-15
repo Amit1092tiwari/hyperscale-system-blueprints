@@ -150,6 +150,18 @@ Simplicity and purity in zero-allocation designs preserve determinism.
         self.assertIn("COUNTER_WINDOW_SIZE: int = 2048", fixed)
         self.assertTrue(any("2048" in f for f in fixes))
 
+    def test_fix_wireguard_anti_replay_test_assertion_contradiction(self):
+        flawed = (
+            "assert window_2048.validate_and_update(1) is True\n"
+            "assert window_2048.validate_and_update(2048) is True\n"
+            "assert window_2048.validate_and_update(1) is True   # Distance 2048 - 1 = 2047 < 2048 (still in window!)\n"
+            "assert window_2048.validate_and_update(2049) is True"
+        )
+        fixed, fixes = tr.fix_wireguard_cryptographic_defects(flawed)
+        self.assertIn("assert window_2048.validate_and_update(1) is False", fixed)
+        self.assertIn("assert window_2048.validate_and_update(2) is True", fixed)
+        self.assertTrue(any("reject replayed packet 1" in f for f in fixes))
+
 
 if __name__ == "__main__":
     unittest.main()
