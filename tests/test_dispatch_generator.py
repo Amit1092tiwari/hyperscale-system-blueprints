@@ -196,6 +196,85 @@ class TestDispatchGenerator(unittest.TestCase):
                 result = gd.attempt_model_generation("mock-key", "gemini-3.8-flash", "test-prompt", max_retries=1)
                 self.assertIsNone(result, "Should return None on exhausted 503 retries without throwing uncaught exception")
 
+    def test_validate_dispatch_completeness_success(self):
+        """Verify that a dispatch with all 10 sections passes completeness check."""
+        full_content = """# ⚡ 2026-10-15 - Dispatch #40: Test Blueprint
+## 1. System Parameters
+- **Target Domain:** AI
+## 2. Problem Statement
+Warning text.
+## 3. High-Level Design (HLD)
+HLD text.
+## 4. Low-Level Design (LLD)
+LLD text.
+## 5. Logical Flow Diagram
+Flow text.
+## 6. Architectural Drill & Nature Analogy
+Analogy text.
+## 7. Production-Grade Executable Artifact
+```python
+x = 1
+```
+## 8. KPI Monitoring Framework
+- Metric 1
+## 9. Failure Mode & Production Edge Cases
+Table
+## 10. Thoughtful Wisdom Words
+> Quote
+"""
+        is_complete, missing = gd.validate_dispatch_completeness(full_content)
+        self.assertTrue(is_complete)
+        self.assertEqual(missing, [])
+
+    def test_validate_dispatch_completeness_detects_missing_sections(self):
+        """Verify that missing sections are detected accurately."""
+        truncated_content = """# ⚡ 2026-10-15 - Dispatch #40: Test Blueprint
+## 1. System Parameters
+## 2. Problem Statement
+## 3. High-Level Design (HLD)
+## 4. Low-Level Design (LLD)
+## 5. Logical Flow Diagram
+## 6. Architectural Drill & Nature Analogy
+## 7. Production-Grade Executable Artifact
+```python
+x = 1
+```
+"""
+        is_complete, missing = gd.validate_dispatch_completeness(truncated_content)
+        self.assertFalse(is_complete)
+        self.assertIn("8. KPI Monitoring Framework", missing)
+        self.assertIn("9. Failure Mode & Production Edge Cases", missing)
+        self.assertIn("10. Thoughtful Wisdom Words", missing)
+
+    def test_validate_dispatch_completeness_detects_unclosed_fence(self):
+        """Verify that odd code fences are detected."""
+        broken_fence_content = """# ⚡ 2026-10-15 - Dispatch #40: Test Blueprint
+## 1. System Parameters
+## 2. Problem Statement
+## 3. High-Level Design (HLD)
+## 4. Low-Level Design (LLD)
+## 5. Logical Flow Diagram
+## 6. Architectural Drill & Nature Analogy
+## 7. Production-Grade Executable Artifact
+```python
+x = 1
+## 8. KPI Monitoring Framework
+## 9. Failure Mode & Production Edge Cases
+## 10. Thoughtful Wisdom Words
+"""
+        is_complete, missing = gd.validate_dispatch_completeness(broken_fence_content)
+        self.assertFalse(is_complete)
+        self.assertTrue(any("Unclosed Code Fence" in m for m in missing))
+
+    def test_all_repository_dispatches_are_complete(self):
+        """Verify that all dispatches currently in the repository have all 10 mandatory sections."""
+        dispatches = list(gd.DISPATCHES_DIR.glob("day_dispatch_*.md"))
+        self.assertGreaterEqual(len(dispatches), 39)
+        for d in dispatches:
+            content = d.read_text(encoding="utf-8")
+            is_complete, missing = gd.validate_dispatch_completeness(content)
+            self.assertTrue(is_complete, f"{d.name} is incomplete: missing {missing}")
+
 if __name__ == '__main__':
     unittest.main()
 
