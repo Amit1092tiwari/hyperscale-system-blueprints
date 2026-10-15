@@ -27,6 +27,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import uniqueness
 import blueprints_catalog as bc
+import technical_reviewer
 
 # Re-export SEEDS and PILLARS for backwards compatibility
 SEEDS = bc.SEEDS
@@ -618,7 +619,20 @@ def main():
 
     print(f"[SUCCESS] {reason}")
 
-    # 6. Write and Verify File
+    # 7. Automated Technical Review & Remediation Gate
+    print("\n[REVIEW] Executing deep technical review and code linting...")
+    generated_content, findings, fixes = technical_reviewer.review_and_fix_dispatch(generated_content, target_filename)
+    if findings:
+        for finding in findings:
+            print(f"[REVIEW WARNING] {finding}", file=sys.stderr)
+    if fixes:
+        print(f"[REMEDIATION] Applied {len(fixes)} automated technical fixes:")
+        for fix in fixes:
+            print(f"  - {fix}")
+    else:
+        print("[SUCCESS] Technical review clean: zero code defects detected.")
+
+    # 8. Write and Verify File
     DISPATCHES_DIR.mkdir(parents=True, exist_ok=True)
     with open(target_filepath, "w", encoding="utf-8") as f:
         f.write(generated_content)

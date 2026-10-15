@@ -282,9 +282,8 @@ class UserspaceWireGuardReactor:
         self.total_bytes_encrypted = 0
 
     def encrypt_and_encapsulate(self, storage_block: bytes) -> bool:
-        # Enforce 64-bit strict monotonic nonces
-        self.nonce_counter += 1
-        nonce_bytes = struct.pack("<Q4s", self.nonce_counter, b"\x00\x00\x00\x00")
+        # WireGuard RFC 8439 96-bit ChaCha20 nonce: 32-bit zero prefix + 64-bit counter (<IQ)
+        nonce_bytes = struct.pack("<IQ", 0, self.nonce_counter)
         
         # Submit to QAT hardware acceleration ring
         accepted = self.qat_engine.submit_encrypt_request(self.peer_key, nonce_bytes, storage_block)

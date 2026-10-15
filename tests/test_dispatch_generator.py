@@ -275,6 +275,20 @@ x = 1
             is_complete, missing = gd.validate_dispatch_completeness(content)
             self.assertTrue(is_complete, f"{d.name} is incomplete: missing {missing}")
 
+    def test_technical_reviewer_integrated_in_dispatch_generation(self):
+        """Verify that newly generated content passes technical review and receives audit annotations."""
+        past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
+        seed, body = gd.bc.get_next_unique_blueprint(40, past)
+        raw_mock = gd.generate_mock_dispatch(40, seed, "2026-10-15", past, body)
+        sanitized = gd.sanitize_generated_dispatch(raw_mock, 40, seed, "2026-10-15")
+
+        reviewed_content, findings, fixes = gd.technical_reviewer.review_and_fix_dispatch(sanitized, "day_dispatch_test.md")
+        self.assertEqual(findings, [])
+        self.assertIn("Dispatch Technical Review & Completeness Audit", reviewed_content)
+        self.assertIn("Complete / Verified (10/10 Sections Verified)", reviewed_content)
+
+
 if __name__ == '__main__':
     unittest.main()
+
 
