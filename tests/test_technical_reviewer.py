@@ -162,7 +162,74 @@ Simplicity and purity in zero-allocation designs preserve determinism.
         self.assertIn("assert window_2048.validate_and_update(2) is True", fixed)
         self.assertTrue(any("reject replayed packet 1" in f for f in fixes))
 
+    def test_senior_peer_evaluation_pillar_d_fhe(self):
+        meta_d = {"pillar": "D", "title": "Hardware-Enclaved TFHE Torus Bootstrapping Fabric"}
+        eval_d = tr.evaluate_senior_peer_architecture("tfhe torus homomorphic enclave sgx sev-snp", meta_d)
+        self.assertIn("Principal Cryptographic Systems Architect", eval_d["reviewer_title"])
+        self.assertIn("Homomorphic Lattice Cryptography (TFHE/LWE)", eval_d["focus_areas"])
+        self.assertIn("Side-Channel Timing Resistance", eval_d["focus_areas"])
+        matrix_titles = [m[0] for m in eval_d["matrix"]]
+        self.assertIn("Cryptographic Noise Budget & Variance Reset", matrix_titles)
+        self.assertIn("Constant-Time Oblivious Evaluation", matrix_titles)
+        self.assertIn("Hardware Enclave Attestation & Memory Isolation", matrix_titles)
+        self.assertIn("Enclave Page Cache (EPC) Allocation", matrix_titles)
+        self.assertIn("SEV-SNP", eval_d["critique"])
+
+    def test_fix_tfhe_cryptographic_defects_end_to_end(self):
+        flawed = '''
+class EnclaveTFHEEngine:
+    def __init__(self, lwe_dim: int = 64, ring_dim: int = 256):
+        self.n = lwe_dim
+        self.N = ring_dim
+        self._secret_key_lwe = np.random.randint(0, 2, size=self.n, dtype=np.int32)
+        self._secret_key_ring = np.random.randint(0, 2, size=self.N, dtype=np.int32)
+
+    def encrypt_lwe(self, message_bit: int):
+        mu = 0.25 if message_bit == 1 else 0.0
+
+    def decrypt_lwe(self, ct):
+        dist_0 = min(phase, 1.0 - phase)
+        dist_1 = min(abs(phase - 0.25), 1.0 - abs(phase - 0.25))
+
+    def programmable_bootstrapping(self, ct_in, lut_poly):
+        for i in range(self.n):
+            shift_amount = a_bar[i]
+            if self._secret_key_lwe[i] == 1:
+                acc_b = self._negacyclic_monomial_mul(acc_b, shift_amount)
+                acc_a = self._negacyclic_monomial_mul(acc_a, shift_amount)
+        for i in range(min(self.n, self.N)):
+            new_a[i] = acc_b[i]
+        new_b = float(acc_b[0] + noise_reset) % 1.0
+
+    def homomorphic_nand(self, ct1, ct2):
+        b_nand = (0.625 - ct1.b - ct2.b) % 1.0
+        lut_poly = np.zeros(self.N, dtype=np.float64)
+        for i in range(self.N):
+            lut_poly[i] = 0.25 if i < (self.N // 2) else 0.0
+
+    def evaluate_splice_site_match(self, cand, target):
+        xnor_out = self.homomorphic_nand(nand2, nand3)
+        gate_count += 4
+        peak_noise = max(peak_noise, xnor_out.noise_variance)
+
+    def test_pbs(self):
+        lut = np.zeros(self.engine.N, dtype=np.float64)
+        lut[: self.engine.N // 2] = 0.25  # Identity LUT for bit 1
+'''
+        fixed, fixes = tr.fix_tfhe_cryptographic_defects(flawed)
+        self.assertIn("_oblivious_cmux_rotate", fixed)
+        self.assertIn("self.bootstrapping_key =", fixed)
+        self.assertIn("b_nand = (0.125 - ct1.b - ct2.b) % 1.0", fixed)
+        self.assertIn("lut_poly[i] = 0.125", fixed)
+        self.assertIn("mu = 0.125 if message_bit == 1 else 0.875", fixed)
+        self.assertIn("xor_out = self.homomorphic_nand(nand2, nand3)", fixed)
+        self.assertIn("xnor_out = self.homomorphic_nand(xor_out, xor_out)", fixed)
+        self.assertIn("(-acc_b[self.N - i]) % 1.0", fixed)
+        self.assertIn("np.dot(new_a, self._secret_key_lwe)", fixed)
+        self.assertGreaterEqual(len(fixes), 5)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

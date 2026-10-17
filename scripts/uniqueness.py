@@ -22,7 +22,12 @@ STOP_WORDS = {
     "none", "class", "def", "return", "self", "import", "from", "print",
     "visual", "ascii", "topology", "decision", "sequence", "breakdown",
     "nature", "analogy", "biological", "structural", "parallel", "unit",
-    "test_case", "assert", "self.assert", "classdef", "stroke", "fill"
+    "test_case", "assert", "self.assert", "classdef", "stroke", "fill",
+    "assertequal", "assertfalse", "assertgreater", "assertin", "assertless", "assertnotin", "asserttrue",
+    "autonumber", "branches", "cancel", "checkbackpressure", "checkout", "concurrency",
+    "errorabort", "executeengine", "flowchart", "latest", "minutes", "participant", "permissions",
+    "recordlineage", "subgraph", "timeout", "ubuntu", "validateprotocol", "runs", "matrix",
+    "descriptor", "deadbeef", "chunks", "chunk", "aligned", "slots", "slot", "sieve", "allocator", "dispatcher", "auditor", "worker"
 }
 
 def extract_tokens(text: str) -> Set[str]:
