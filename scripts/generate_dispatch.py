@@ -257,6 +257,9 @@ YOU MUST GENERATE THE OUTPUT STRICTLY ADHERING TO THE FOLLOWING 10-SECTION ORDER
 
 ## 10. Thoughtful Wisdom Words
 [Stylized Quote Blockquote with attribution to Principal Systems Architect]
+
+CRITICAL COMPLETENESS INVARIANT:
+You MUST emit all 10 sections completely in order. Ensure all markdown code fences (```) are cleanly closed. Do NOT truncate, abbreviate, or omit Sections 8, 9, or 10.
 """
 
 def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str) -> str:
