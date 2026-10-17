@@ -1074,7 +1074,29 @@ def load_blueprint_body(blueprint_id: str, seed: Optional[Dict] = None) -> str:
     """Load the pre-formatted markdown body (Sections 2-10) for a given blueprint id."""
     template_file = CATALOG_DIR / f"blueprint_{blueprint_id}.md"
     if template_file.exists():
-        return template_file.read_text(encoding="utf-8")
+        content = template_file.read_text(encoding="utf-8")
+        # Defensive check: ensure all sections 2-10 exist and fences are balanced
+        missing_core_sections = []
+        for sec_num, sec_pat in [
+            (2, r"^##\s*2\.\s*Problem Statement"),
+            (3, r"^##\s*3\.\s*High-Level Design"),
+            (4, r"^##\s*4\.\s*Low-Level Design"),
+            (5, r"^##\s*5\.\s*Logical Flow Diagram"),
+            (6, r"^##\s*6\.\s*Architectural Drill"),
+            (7, r"^##\s*7\.\s*Production-Grade Executable Artifact"),
+            (8, r"^##\s*8\.\s*KPI Monitoring Framework"),
+            (9, r"^##\s*9\.\s*Failure Mode"),
+            (10, r"^##\s*10\.\s*Thoughtful Wisdom Words"),
+        ]:
+            if not re.search(sec_pat, content, re.M | re.I):
+                missing_core_sections.append(sec_num)
+        fence_lines = [l for l in content.splitlines() if l.strip().startswith("```")]
+        if not missing_core_sections and len(fence_lines) % 2 == 0:
+            return content
+        if seed:
+            print(f"[WARNING] Catalog template '{template_file.name}' incomplete (missing {missing_core_sections}); synthesizing procedural body.", file=sys.stderr)
+            return synthesize_procedural_blueprint_body(seed)
+        return content
     if seed:
         return synthesize_procedural_blueprint_body(seed)
     raise FileNotFoundError(f"Blueprint template not found: {template_file}")

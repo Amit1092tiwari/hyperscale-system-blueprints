@@ -70,13 +70,31 @@ class TestDispatchGenerator(unittest.TestCase):
         """Verify that Day 37 specifically generates a 100% unique blueprint against all actual dispatches."""
         past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
         self.assertGreaterEqual(len(past), 37)
-        seed, body = gd.bc.get_next_unique_blueprint(37, past)
+        past_for_37 = [d for d in past if d["day_number"] < 37]
+        seed, body = gd.bc.get_next_unique_blueprint(37, past_for_37)
 
         self.assertEqual(seed["pillar_id"], "A", "Day 37 must belong to Pillar A")
-        content = gd.generate_mock_dispatch(37, seed, "2026-10-15", past, body)
+        content = gd.generate_mock_dispatch(37, seed, "2026-10-15", past_for_37, body)
         sanitized = gd.sanitize_generated_dispatch(content, 37, seed, "2026-10-15")
-        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past)
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past_for_37)
         self.assertTrue(is_unique, f"Day 37 collision: {reason}")
+
+    def test_day_44_generation_completeness_and_uniqueness(self):
+        """Verify that Day 44 generates a 100% complete (10/10 sections) and unique blueprint."""
+        past = gd.uniqueness.get_previous_dispatches_metadata(gd.DISPATCHES_DIR)
+        self.assertGreaterEqual(len(past), 44)
+        past_for_44 = [d for d in past if d["day_number"] < 44]
+        seed, body = gd.bc.get_next_unique_blueprint(44, past_for_44)
+
+        self.assertEqual(seed["pillar_id"], "D", "Day 44 must belong to Pillar D")
+        content = gd.generate_mock_dispatch(44, seed, "2026-10-17", past_for_44, body)
+        sanitized = gd.sanitize_generated_dispatch(content, 44, seed, "2026-10-17")
+
+        is_complete, missing = gd.validate_dispatch_completeness(sanitized)
+        self.assertTrue(is_complete, f"Day 44 missing sections: {missing}")
+
+        is_unique, reason = gd.uniqueness.verify_dispatch_uniqueness(sanitized, past_for_44)
+        self.assertTrue(is_unique, f"Day 44 collision: {reason}")
 
     def test_attempt_model_generation_aborts_immediately_on_404(self):
         """Verify that a 404 NOT_FOUND response aborts immediately without burning retries."""

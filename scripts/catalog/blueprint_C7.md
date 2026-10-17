@@ -1,14 +1,14 @@
 ## 2. Problem Statement
 
 > [!WARNING]
-> **The Cold Object Metadata Overhead & Unpruned Page Scan Wall:** In multi-petabyte analytical data lakehouses executing concurrent BI queries and ad-hoc vector scans, point lookups and narrow range filters face severe performance cliffs. Standard columnar formats (Parquet, ORC) force readers to download entire file footers and scan unindexed data pages from remote object stores (S3, GCS). At petabyte scale, issuing millions of `GET` range requests across unclustered object prefixes saturates cloud storage IOPS limits, triggers aggressive rate-limiting (HTTP 503 SlowDown), and inflates median query latency from sub-second to over 45 seconds.
+> **The Cloud Object Store Metadata & Read Amplification Wall:** Executing analytical point queries and range filters across petabyte-scale lakehouses stored in object storage (AWS S3, Google Cloud Storage) incurs catastrophic read amplification. Naive Parquet readers download entire row groups and dictionary headers to evaluate single-record predicates. Under high-frequency concurrent analytical workloads, this unpruned scanning triggers crippling HTTP 503 SlowDown rate-limiting penalties, inflates network egress bills, and degrades P99 query latency from milliseconds to tens of seconds.
 
-Distributed enterprise query engines operating on modern lakehouse architectures encounter critical data layout and pruning bottlenecks:
-1. **Unpruned Remote Page Amplification:** When queries filter on secondary columns lacking physical partition boundaries, columnar readers are forced to fetch multi-megabyte compressed column chunks, decompress dictionary pages, and evaluate predicate filters in software—wasting 92% of network bandwidth on discarded rows.
-2. **Metadata Manifest Split Churn:** As streaming pipelines continuously ingest micro-batches, manifest lists fragment into tens of thousands of tiny avro files, requiring distributed query planners to spend more time reading file metadata than scanning actual columnar data.
-3. **Write-Time Compaction Lock Contention:** Traditional lakehouse compaction engines rewrite entire multi-gigabyte data files synchronously, inducing optimistic concurrency control (OCC) commit collisions with active streaming writer tasks.
+Lakehouses supporting high-velocity multi-dimensional analytics face fundamental physical and algorithmic storage barriers:
+1. **Object Store Request Rate Throttling:** Cloud object stores limit prefix request rates to 3,500 PUT and 5,500 GET requests per second per prefix. Unindexed micro-partition scanning exhausts these limits instantaneously during concurrent dashboard query bursts.
+2. **Column Chunk Deserialization Overhead:** Decoding Snappy or ZSTD-compressed Parquet column chunks solely to evaluate a secondary filter key wastes up to 95% of worker CPU cycles on discardable rows.
+3. **Multi-Dimensional Space Shattering:** Traditional single-column B-tree or min-max statistics degrade when queries filter across multiple orthogonal dimensions (e.g., patient genomic coordinates, timestamps, and assay identifiers). Standard compound sorting optimizes only the primary sort key while leaving secondary dimensions completely unsorted.
 
-To achieve sustained sub-second point lookups and zero-copy range scans, the lakehouse storage architecture demands vectorized Parquet micro-clustering along space-filling Hilbert curves, split-block Bloom filter (SBFF) page-level indexing, and asynchronous lock-free delta compactor tasks.
+To shatter this performance wall, the lakehouse architecture introduces a dual-layer indexing engine combining SIMD-accelerated Parquet Split-Block Bloom Filters (SBBF) for instantaneous negative record pruning and 2D Hilbert space-filling curve micro-clustering for optimal multi-dimensional co-locality.
 
 ---
 
@@ -17,69 +17,93 @@ To achieve sustained sub-second point lookups and zero-copy range scans, the lak
 ### Visual ASCII Topology
 ```text
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │                 Distributed Query Engine (DuckDB / Trino)                   │
+  │                         Distributed Analytical Client                       │
   └──────────────────────────────────────┬──────────────────────────────────────┘
-                                         │ Filtered Pushdown SQL (Arrow IPC)
+                                         │ Arrow Flight SQL Query Stream
                                          ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │           Vectorized Parquet Micro-Clustering & Bloom Sieve Core            │
+  │         Vectorized Parquet Bloom Sieve & Hilbert Micro-Cluster Engine       │
   │  ┌─────────────────────────┐   ┌─────────────────────────────────────────┐  │
-  │  │ Split-Block Bloom Sieve │   │ Vectorized Parquet Page Index Evaluator │  │
-  │  │ [Negative Key Pruning]  │   │ [Min/Max Hilbert Space Boundary Match]  │  │
+  │  │ SBBF Filter Evaluator   │   │ Hilbert Coordinate Space-Filling Router │  │
+  │  │ [SIMD XXHash64 Probing] │   │ [2D Multi-Dimensional Co-Locality]      │  │
   │  └────────────┬────────────┘   └────────────────────┬────────────────────┘  │
   │               │                                     │                       │
-  │               ▼ Skip 95% S3 GETs                    ▼ Direct Byte Range DMA │
+  │               ▼ Negative Prune (Skip 95% Objects)   ▼ Compact Byte-Range    │
   │  ┌─────────────────────────┐   ┌─────────────────────────────────────────┐  │
-  │  │ Byte-Range Object Cache │   │ Asynchronous Segment Compactor Sieve    │  │
-  │  │ [Local SSD Read Buffer] │   │ [Lock-Free Delta Log Compaction]        │  │
+  │  │ Asynchronous Compactor  │   │ Vectorized Arrow RecordBatch Reader     │  │
+  │  │ [Snapshot Isolation]    │   │ [Direct Parquet Page Index Scans]       │  │
   │  └─────────────────────────┘   └─────────────────────────────────────────┘  │
   └──────────────────────────────────────┬──────────────────────────────────────┘
-                                         │ S3 / GCS Optimized Byte-Range Requests
+                                         │ Aligned HTTP GET Byte-Range Requests
                                          ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │                     Remote Object Storage Tier (S3 / GCS)                   │
-  │       - OpenLineage Execution Facets Tracking Parquet Page Skip Ratios      │
-  │       - Zero-Cost CI Assertions & Microsecond Pruning Telemetry             │
+  │                     Cloud Object Storage (S3 / GCS Lakehouse)               │
+  │       - Partition Metadata & Split-Block Bloom Filter Headers               │
+  │       - Compacted Micro-Partitions Clustered along Hilbert Space Curves     │
   └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Native Mermaid Architecture
 ```mermaid
 graph TD
-    subgraph QueryIngress ["🔍 Distributed Query Planning Tier"]
-        Query["SQL Point & Range Query<br/>Predicate: WHERE patient_id = 0x9F4A"]
-        Planner["Vectorized Query Planner<br/>Translates AST to Bloom Filter Keys"]
-        Query --> Planner
+    subgraph ClientTier ["🌐 Analytical Query Client"]
+        SQLQuery["Analytical Point / Range Query<br/>WHERE patient_id = 94821"]
     end
 
-    subgraph PruningTier ["⚡ Lakehouse Index Pruning Pipeline"]
-        Planner --> PageIndex["Parquet Page Index Evaluator<br/>Hilbert Curve Min/Max Bounds"]
-        Planner --> BloomSieve["Split-Block Bloom Filter Sieve<br/>XXHash64 Masking & SIMD Probe"]
+    subgraph PruningEngine ["⚡ Vectorized Parquet Bloom Sieve Engine"]
+        SQLQuery --> MetaScan["Parquet Metadata & Bloom Header<br/>Single 4KB Prefix Read"]
         
-        PageIndex -- "Out of Bounds" --> PrunePage["🚫 Skip Parquet Page<br/>Zero Network Fetch"]
-        BloomSieve -- "Key Absent (Negative Match)" --> PruneFile["🚫 Skip Remote Object<br/>Eliminate HTTP GET"]
+        subgraph SBBFSieve ["🔍 Split-Block Bloom Filter Sieve (SBBF)"]
+            MetaScan --> HashEval["XXHash64 & 8-Way Salt Masking<br/>SIMD 256-Bit Block Selection"]
+            HashEval --> BitProbe["SIMD Block Bit Probe<br/>8-Word Wordmask Test"]
+        end
+        
+        BitProbe -- "Negative Match (0)" --> SkipFile["🚫 Skip Entire File / RowGroup<br/>Zero Data Transferred (95% Pruned)"]
+        
+        subgraph HilbertCluster ["🗺️ Hilbert Curve Spatial Indexer"]
+            BitProbe -- "Positive Match (1)" --> HilbertEval["Evaluate Hilbert Spatial Distance<br/>2D Coordinates -> 1D Space Curve"]
+            HilbertEval --> ByteRange["Calculate Minimal Byte Range<br/>Offset: 256KB - 320KB"]
+        end
+        
+        ByteRange --> VectorFetch["Direct HTTP Range GET<br/>Download Only Target Parquet Page"]
     end
 
-    subgraph FetchTier ["📦 Vectorized Columnar Splicing"]
-        BloomSieve -- "Candidate Match" --> S3Fetch["S3 Byte-Range GET<br/>Exact 64KB Page Fetch"]
-        PageIndex -- "In Range" --> S3Fetch
-        S3Fetch --> RecordBatch["Arrow Vectorized RecordBatch<br/>Direct Memory Splicing"]
+    subgraph LakehouseStorage ["📦 Cloud Object Storage (S3 Lakehouse)"]
+        VectorFetch --> TargetPage["Single Parquet Column Chunk Page<br/>Vectorized Arrow Flight Stream"]
     end
 
-    subgraph CompactionWorker ["⚙️ Asynchronous Micro-Cluster Compactor"]
-        IngestBuffer["Streaming Delta Log<br/>Micro-Batches (100k rows)"] --> HilbertSorter["Hilbert Curve Spatial Sorter<br/>Multi-Column Co-Locality"]
-        HilbertSorter --> ParquetWriter["Parquet Micro-Cluster Writer<br/>Generates Split-Block Bloom Headers"]
-        ParquetWriter --> S3Object["Object Storage Partition File"]
-    end
+    classDef host fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef comp fill:#0f172a,stroke:#a855f7,stroke-width:2px,color:#f8fafc;
+    classDef safe fill:#022c22,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef warn fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#f8fafc;
+    class ClientTier,SQLQuery host;
+    class PruningEngine,MetaScan,HashEval,BitProbe,HilbertEval,ByteRange,VectorFetch comp;
+    class SkipFile warn;
+    class TargetPage safe;
 ```
 
 ---
 
-## 4. Low-Level Design (LLD) & Invariant Protocols
+## 4. Low-Level Design (LLD)
 
+### Visual ASCII Memory Layout
 ```text
-Sequence Protocol: Predicate-Pushed Vectorized Page Indexing & Bloom Pruning
-=============================================================================
+  Split-Block Bloom Filter & Hilbert Cache Layout:
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ Split-Block Bloom Filter Layout (256 bits / 32 bytes per block)             │
+  │   ├── Block Index:       ((hash >> 32) * num_blocks) >> 32                  │
+  │   ├── Words 0-7:         8 x 32-bit unsigned integers (Salt Masked)         │
+  │   └── SIMD Vector:       Single 256-bit AVX2 / AVX-512 register load        │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │ 2D Hilbert Curve Index Descriptor:                                          │
+  │   ├── Coordinate Inputs: 32-bit X (Patient ID), 32-bit Y (Timestamp Epoch)  │
+  │   ├── Recursion Order:   Order 16 (64-bit continuous space-filling scalar)  │
+  │   └── Spatial Property:  Euclidean proximity maps directly to linear offsets│
+  └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Sequence Protocol: Predicate-Pushed Vectorized Page Indexing & Bloom Pruning
+```text
 Query Planner       Split-Block Bloom       Parquet Page Index       Object Storage
     │                       │                       │                       │
     │── 1. EvalPredicate ──>│                       │                       │
@@ -105,8 +129,79 @@ Query Planner       Split-Block Bloom       Parquet Page Index       Object Stor
 
 ---
 
-## 5. Algorithmic Core: Split-Block Bloom Filter & Hilbert Spatial Clustering
+## 5. Logical Flow Diagram
 
+### Visual ASCII Decision Tree
+```text
+  [Inbound Analytical Query with Equality / Range Predicate]
+                                │
+                                ▼
+               [Fetch Parquet SBBF Header (4KB)]
+                                │
+                                ▼
+               [Execute XXHash64 on Query Key]
+                                │
+                                ▼
+         [SIMD 8-Way Salt Bit Probe over SBBF Block]
+               ├── BIT_NOT_SET (0) ──► [PRUNED: Skip RowGroup/File Completely]
+               └── ALL_BITS_SET (1)──► [CANDIDATE: Query Secondary Hilbert Index]
+                                                  │
+                                                  ▼
+                         [Compute Hilbert 1D Coordinate Bounding Box]
+                                                  │
+                                                  ▼
+                         [Issue Vectorized Byte-Range HTTP GET]
+                                                  │
+                                                  ▼
+                         [Return Arrow RecordBatch to Query Engine]
+```
+
+### Native Mermaid Flowchart
+```mermaid
+flowchart TD
+    Start["🔍 Inbound SQL Query Predicate"] --> GetHeader["Fetch SBBF Header Byte Range<br/>4KB Range GET"]
+    GetHeader --> HashKey["Compute XXHash64 on Target Value"]
+    
+    HashKey --> BlockSelect["Select 256-Bit Split-Block<br/>Block = ((h >> 32) * N) >> 32"]
+    BlockSelect --> BitTest{"Are All 8 Salted<br/>Bits Set in Block?"}
+    
+    BitTest -- "No (Zero Bit Match)" --> PruneFast["🚫 Skip Entire File / Row Group<br/>Zero S3 Data Transfer"]
+    BitTest -- "Yes (Potential Match)" --> HilbertLookup["Calculate Hilbert 1D Index Range<br/>2D Spatial Curve Proximity"]
+    
+    HilbertLookup --> RangeScan["Issue Aligned Byte-Range HTTP GET<br/>Download Only Target Parquet Page"]
+    RangeScan --> Finish["📦 Emit Arrow RecordBatch to Engine"]
+
+    classDef danger fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#f8fafc;
+    classDef comp fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef safe fill:#022c22,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    class PruneFast danger;
+    class Start,GetHeader,HashKey,BlockSelect,BitTest,HilbertLookup comp;
+    class RangeScan,Finish safe;
+```
+
+---
+
+## 6. Architectural Drill & Nature Analogy
+
+### ⚙️ The Systemic Breakdown
+The engineering elegance of Split-Block Bloom Filters and Hilbert Space-Filling curves rests on two foundational principles of modern cache and storage mechanics:
+1. **Cache-Line Aligned Split-Block Bit Sieve:** Standard Bloom filters scatter bit probes across disparate memory locations, causing multiple CPU L1/L2 cache misses per probe. SBBF restricts all 8 bit probes for a given key to a single 256-bit (32-byte) block. Because a 32-byte block fits entirely within a single 64-byte CPU cache line, probing is executed in a single SIMD register load with zero DRAM page faults.
+2. **Fractal Hilbert Space-Filling Locality:** Projecting multi-dimensional points (such as genomic coordinates and time horizons) onto a 1D Hilbert fractal curve preserves spatial clustering. Points close in multi-dimensional space remain adjacent along the 1D curve with mathematical bounds, allowing query planners to convert complex multi-dimensional filters into compact, continuous byte-range scans.
+3. **Decoupled Snapshot Compaction:** Micro-clustering workers operate asynchronously in background task loops, clustering incoming delta partitions along Hilbert trajectories and committing new manifests using atomic snapshot updates without interrupting active streaming ingestion pipelines.
+
+### 🌿 The Nature Analogy
+
+> [!TIP]
+> **The Honeybee Comb Hexagonal Spatial Tiling:** Honeybees organize comb construction using regular hexagonal tessellations to minimize wax boundary material while maximizing volumetric honey storage. When foraging worker bees return to the hive, they communicate food source locations via the waggle dance, encoding multi-dimensional spatial information (polar angle, solar vector, and flight distance) into a continuous sequence of body vibrations. Hive bees decode these dance signals to immediately isolate spatial foraging clusters, ignoring millions of non-productive square meters of surrounding terrain. Similarly, lakehouse query planners use Hilbert curve indexing to project multi-dimensional query coordinates onto compact storage byte ranges, skipping unindexed disk sectors and maximizing scan density!
+
+• **The Biological System:** Honeybee hexagonal spatial comb organization and waggle dance trajectory encoding.
+• **The Structural Parallel:** Split-Block Bloom filtering and Hilbert spatial micro-clustering isolating exact data subsets while skipping irrelevant storage space.
+
+---
+
+## 7. Production-Grade Executable Artifact
+
+### 📦 File 1: Split-Block Bloom Filter & Hilbert Sorter (`parquet_bloom_sieve.py`)
 ```python
 """
 Split-Block Bloom Filter (SBBF) & Hilbert Micro-Clustering Engine.
@@ -115,6 +210,8 @@ Implements vectorized split-block bit probing with XXHash64 masking and spatial 
 
 import math
 import struct
+import unittest
+import random
 from typing import List, Tuple, Dict, Any
 
 class SplitBlockBloomFilter:
@@ -192,111 +289,7 @@ class HilbertSpatialIndexer:
                 x, y = y, x
             s >>= 1
         return d
-```
 
----
-
-## 6. Execution Lineage & Observability
-
-```json
-{
-  "run": {
-    "runId": "c7a84092-2b3f-4e92-9cb1-8f6a91d2001c"
-  },
-  "job": {
-    "namespace": "hyperscale.lakehouse.parquet",
-    "name": "split_block_bloom_micro_compactor"
-  },
-  "eventTime": "2026-10-15T15:30:00.000Z",
-  "eventType": "COMPLETE",
-  "inputs": [
-    {
-      "namespace": "s3://clinical-genomic-lakehouse",
-      "name": "raw_delta_micro_partitions",
-      "facets": {
-        "parquetBloomIndex": {
-          "totalBlocksEvaluated": 16384,
-          "negativePrunedObjectsCount": 15420,
-          "pruneEfficiencyRatio": 0.9411,
-          "simdProbingLatencyNs": 42
-        }
-      }
-    }
-  ],
-  "outputs": [
-    {
-      "namespace": "s3://clinical-genomic-lakehouse",
-      "name": "compacted_hilbert_micro_clusters",
-      "facets": {
-        "microClusterCompaction": {
-          "hilbertCurveOrder": 16,
-          "rowsCompactedTotal": 5000000,
-          "byteRangeScanSpeedMBPerSec": 4200.5,
-          "splitBlockBloomFalsePositivePct": 0.0084
-        }
-      }
-    }
-  ]
-}
-```
-
----
-
-## 7. Zero-Cost Verification & Production Harness
-
-### ⚙️ File 1: `.github/workflows/verify_parquet_bloom_sieve.yml`
-```yaml
-name: Verify Parquet Bloom Sieve Engine
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  verify-bloom-micro-clustering:
-    name: Verify Split-Block Bloom & Hilbert Sieve
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11 Runtime
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install Verification Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-
-      - name: Run Bloom Sieve & Compactor Invariants
-        run: |
-          python -m unittest -v test_parquet_bloom_sieve.py
-```
-
-### 🐍 File 2: `test_parquet_bloom_sieve.py`
-```python
-"""
-Production-Grade Verification Harness for Split-Block Bloom Filter Sieve and Hilbert Clustering.
-Validates zero false negatives, negative pruning efficiency, and 2D spatial locality.
-"""
-
-import unittest
-import random
-from typing import List, Tuple
-
-# Import algorithmic primitives
-from test_parquet_bloom_sieve_lib import SplitBlockBloomFilter, HilbertSpatialIndexer
 
 class TestParquetBloomSieveEngine(unittest.TestCase):
     def setUp(self):

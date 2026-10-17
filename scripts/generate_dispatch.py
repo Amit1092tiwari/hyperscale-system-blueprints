@@ -273,7 +273,7 @@ def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str) ->
     )
     config_kwargs = {
         "temperature": 0.7,
-        "max_output_tokens": 8192,
+        "max_output_tokens": 16384,
     }
     if afc_config is not None:
         config_kwargs["automatic_function_calling"] = afc_config
@@ -302,7 +302,7 @@ def generate_via_rest_api(api_key: str, model_name: str, prompt: str) -> str:
         ],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 8192
+            "maxOutputTokens": 16384
         }
     }
 
@@ -525,9 +525,14 @@ def generate_content_with_resilience(api_key: str, requested_model: str, prompt:
         print(f"\n[INFO] [{idx}/{len(candidate_models)}] Initiating generation via model: {model}...")
         result = attempt_model_generation(api_key, model, prompt)
         if result and result.strip():
-            print(f"[SUCCESS] Content cleanly generated via model: {model}")
-            return result
-        print(f"[INFO] Model '{model}' unavailable or high demand. Cascading to next candidate model...")
+            # Validate completeness before declaring success
+            is_complete, missing_sections = validate_dispatch_completeness(result)
+            if is_complete:
+                print(f"[SUCCESS] Content cleanly generated via model: {model} (All 10 sections verified)")
+                return result
+            print(f"[WARNING] Model '{model}' output incomplete: Missing {missing_sections}. Cascading to next candidate model...", file=sys.stderr)
+        else:
+            print(f"[INFO] Model '{model}' unavailable or high demand. Cascading to next candidate model...")
 
     return None
 
@@ -593,8 +598,14 @@ def main():
         generated_content = sanitize_generated_dispatch(generated_content, series_day, recovery_seed, current_date)
         is_complete, missing_sections = validate_dispatch_completeness(generated_content)
         if not is_complete:
-            print(f"[ERROR] Critical: Catalog fallback blueprint is also incomplete: {missing_sections}", file=sys.stderr)
-            sys.exit(1)
+            print(f"[WARNING] Catalog fallback blueprint is incomplete: {missing_sections}. Synthesizing full procedural blueprint...", file=sys.stderr)
+            recovery_body = bc.synthesize_procedural_blueprint_body(recovery_seed)
+            generated_content = generate_mock_dispatch(series_day, recovery_seed, current_date, past_dispatches, recovery_body)
+            generated_content = sanitize_generated_dispatch(generated_content, series_day, recovery_seed, current_date)
+            is_complete, missing_sections = validate_dispatch_completeness(generated_content)
+            if not is_complete:
+                print(f"[ERROR] Critical: Procedural fallback blueprint is also incomplete: {missing_sections}", file=sys.stderr)
+                sys.exit(1)
         seed = recovery_seed
         print(f"[RECOVERY] Successfully resolved complete blueprint: '{seed['title']}'")
 
