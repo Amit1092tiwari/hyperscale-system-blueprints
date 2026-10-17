@@ -27,7 +27,16 @@ STOP_WORDS = {
     "autonumber", "branches", "cancel", "checkbackpressure", "checkout", "concurrency",
     "errorabort", "executeengine", "flowchart", "latest", "minutes", "participant", "permissions",
     "recordlineage", "subgraph", "timeout", "ubuntu", "validateprotocol", "runs", "matrix",
-    "descriptor", "deadbeef", "chunks", "chunk", "aligned", "slots", "slot", "sieve", "allocator", "dispatcher", "auditor", "worker"
+    "descriptor", "deadbeef", "chunks", "chunk", "aligned", "slots", "slot", "sieve", "allocator", "dispatcher", "auditor", "worker",
+    # Badges, shields & repo template metadata
+    "https", "style", "color", "blue", "blueviolet", "brightgreen", "emerald", "purple", "teal", "red",
+    "githubactions", "apache", "license", "logo", "logocolor", "completeness", "verified", "verify",
+    "status", "sections", "historical", "reason", "incompletion", "limits",
+    # Workflow, test harness & type annotation boilerplate
+    "actions", "workflow", "runtime", "pytest", "unittest", "testcase", "typing", "time",
+    "bool", "dict", "list", "items", "item", "fail", "pass", "line", "code", "text",
+    # Flowchart, diagram syntax & metrics
+    "graph", "norm", "succ", "sequencediagram", "check", "alert", "prompt", "rate", "ratio"
 }
 
 def extract_tokens(text: str) -> Set[str]:

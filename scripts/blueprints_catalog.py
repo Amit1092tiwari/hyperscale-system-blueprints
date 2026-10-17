@@ -803,6 +803,19 @@ def synthesize_procedural_blueprint_body(seed: Dict) -> str:
     test_process = meta.get("test_process", "process_batch")
     test_unit = meta.get("test_unit", "items")
 
+    comp_raw = seed.get("components", "Ingress Ingestion Pod, Parallel Stream Pipeline, Zero-Copy Ring Splicer, Dispatch Coordinator")
+    comps = [c.strip() for c in comp_raw.split(",") if c.strip()]
+    c1 = (comps[0] if len(comps) > 0 else "Ingress Ingestion Pod")[:23]
+    c2 = (comps[1] if len(comps) > 1 else "Parallel Stream Pipeline")[:23]
+    c3 = (comps[2] if len(comps) > 2 else "Zero-Copy Ring Splicer")[:23]
+    c4 = (comps[3] if len(comps) > 3 else "Dispatch Coordinator")[:23]
+
+    concepts_raw = seed.get("concepts", "Memory Page Pinning, Lock-Free Concurrency, Asynchronous Processing")
+    concepts_list = [c.strip() for c in concepts_raw.split(",") if c.strip()]
+    concept1 = (concepts_list[0] if len(concepts_list) > 0 else "Memory Page Pinning")[:30]
+    concept2 = (concepts_list[1] if len(concepts_list) > 1 else "Lock-Free Concurrency")[:30]
+    concept3 = (concepts_list[2] if len(concepts_list) > 2 else "Asynchronous Overlap")[:30]
+
     return f"""## 2. Problem Statement
 
 > [!WARNING]
@@ -821,24 +834,24 @@ def synthesize_procedural_blueprint_body(seed: Dict) -> str:
   ┌─────────────────────────────────────────────────────────────────────────────┐
   │                           Inbound Ingress Gateway                           │
   └──────────────────────────────────────┬──────────────────────────────────────┘
-                                         │ {protocol}
+                                         │ {protocol[:60]}
                                          ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
   │               High-Performance Engine Core ({framework[:35]}...)            │
   │  ┌─────────────────────────┐   ┌─────────────────────────────────────────┐  │
-  │  │ Component Ingestion Pod │   │ Parallel Stream Processing Pipeline     │  │
+  │  │ {c1:<23} │   │ {c2:<39} │  │
   │  └────────────┬────────────┘   └────────────────────┬────────────────────┘  │
   │               │                                     │                       │
   │               ▼                                     ▼                       │
   │  ┌─────────────────────────┐   ┌─────────────────────────────────────────┐  │
-  │  │ Zero-Copy Ring Splicer  │   │ Asynchronous Dispatch Coordinator       │  │
+  │  │ {c3:<23} │   │ {c4:<39} │  │
   │  └─────────────────────────┘   └─────────────────────────────────────────┘  │
   └──────────────────────────────────────┬──────────────────────────────────────┘
                                          │ Vectorized Pipeline Stream
                                          ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
   │                     Telemetry & Verification Layer                          │
-  │       - {lineage}                                                           │
+  │       - {lineage[:70]}
   │       - Zero-Cost CI Assertions & Micro-Second Telemetry Monitoring         │
   └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -849,9 +862,9 @@ graph TD
     Ingress["🌐 Ingress Client Gateway<br/>{protocol[:30]}"] --> CoreEngine["⚙️ High-Throughput Processing Core<br/>{framework[:35]}"]
 
     subgraph Pipeline ["⚡ Subsystem Execution Pipeline"]
-        CoreEngine --> Allocator["📦 Memory & Buffer Allocator<br/>Zero-Copy Pages"]
-        Allocator --> Worker["🚀 Stream Execution Engine<br/>Vectorized Dispatch"]
-        Worker --> Sieve["🔍 Constraint & Compliance Sieve<br/>Audit Verification"]
+        CoreEngine --> Allocator["📦 {c1}<br/>Zero-Copy Pages"]
+        Allocator --> Worker["🚀 {c2}<br/>Vectorized Dispatch"]
+        Worker --> Sieve["🔍 {c3}<br/>Audit Verification"]
     end
 
     Sieve --> Output["📦 Verified System Egress<br/>Clean Processing Output"]
@@ -879,9 +892,9 @@ graph TD
   │   └── Ring Pointers:     Head Ptr [0x00], Tail Ptr [0x80]                    │
   ├─────────────────────────────────────────────────────────────────────────────┤
   │ Vectorized Payload Slots: {concepts[:50]}                                   │
-  │   ├── Slot 0: [Aligned Chunk 0] -> Memory Page Pinning Active               │
-  │   ├── Slot 1: [Aligned Chunk 1] -> Lock-Free Concurrency Safe               │
-  │   └── Slot N: [Aligned Chunk N] -> Asynchronous Processing Overlap           │
+  │   ├── Slot 0: [{concept1}]                                                  │
+  │   ├── Slot 1: [{concept2}]                                                  │
+  │   └── Slot N: [{concept3}]                                                  │
   └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -890,9 +903,9 @@ graph TD
 sequenceDiagram
     autonumber
     participant Client as Client Application
-    participant Dispatcher as Dispatch Coordinator
-    participant Engine as Execution Core
-    participant Audit as OpenLineage Auditor
+    participant Dispatcher as {c1}
+    participant Engine as {c2}
+    participant Audit as {c3}
 
     Client->>Dispatcher: Submit Pipeline Transaction ({protocol[:20]})
     Dispatcher->>Engine: Allocate Zero-Copy Buffer & Pin Pages
@@ -937,8 +950,8 @@ flowchart TD
     CheckBackpressure -- Exceeded --> Throttle[⏳ Apply Backpressure & Wait Queue]
     Throttle --> CheckBackpressure
     
-    CheckBackpressure -- Normal --> ExecuteEngine[⚡ Execute Transformation Core Engine]
-    ExecuteEngine --> RecordLineage[📜 Emit OpenLineage Governance Facet]
+    CheckBackpressure -- Normal --> ExecuteEngine[⚡ Execute {c2}]
+    ExecuteEngine --> RecordLineage[📜 Emit {c3} Governance Facet]
     RecordLineage --> Complete([✅ Operation Successfully Committed])
 
     classDef norm fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
@@ -1134,6 +1147,40 @@ def load_blueprint_body(blueprint_id: str, seed: Optional[Dict] = None) -> str:
         return synthesize_procedural_blueprint_body(seed)
     raise FileNotFoundError(f"Blueprint template not found: {template_file}")
 
+def build_candidate_verification_content(series_day: int, seed: Dict, body: str) -> str:
+    """Build the full mock document to ensure pre-validation matches generate_dispatch exactly."""
+    title = seed.get("title", "Hyperscale Blueprint")
+    domain = seed.get("domain", "")
+    framework = seed.get("framework", "")
+    badge_name = seed.get("badge_name", "Architecture")
+    badge_color = seed.get("badge_color", "blue")
+    header = (
+        f"# ⚡ 2026-10-17 - Dispatch #{series_day}: {title}\n\n"
+        f"[![Pillar](https://img.shields.io/badge/Pillar-{badge_name}-{badge_color}?style=for-the-badge)]()\n"
+        f"[![Validation](https://img.shields.io/badge/Validation-Local--First%20CI%20Verified-emerald?style=for-the-badge&logo=githubactions)]()\n"
+        f"[![Architecture](https://img.shields.io/badge/Architecture-Zero--Cost%20Mock%20Harness-blueviolet?style=for-the-badge)]()\n"
+        f"[![Completeness](https://img.shields.io/badge/Completeness-Complete%20(10%2F10%20Sections)-brightgreen?style=for-the-badge)]()\n"
+        f"[![Uniqueness](https://img.shields.io/badge/Uniqueness-True%20(Verified)-brightgreen?style=for-the-badge)]()\n"
+        f"[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)]()\n\n"
+        f"> [!NOTE]\n"
+        f"> **Dispatch Completeness & Uniqueness Audit**:\n"
+        f"> - **Completeness Status:** Complete (10/10 Sections Verified)\n"
+        f"> - **Missing Sections:** None\n"
+        f"> - **Reason for Incompletion:** N/A (Fully generated within token limits)\n"
+        f"> - **Unique Flag:** `true` (Verified non-colliding across historical catalog)\n\n"
+        f"---\n\n"
+        f"## 1. System Parameters\n\n"
+        f"- **Target Domain:** {domain}\n"
+        f"- **Framework Used:** {framework}\n"
+        f"- **Technology Stack:** {seed.get('tech_stack', '')}\n"
+        f"- **Scale Bottleneck:** {seed.get('bottleneck', '')}\n"
+        f"- **API/Serialization Protocol:** {seed.get('protocol', '')}\n"
+        f"- **Data Lineage Component:** {seed.get('lineage', '')}\n"
+        f"- **Components Used:** {seed.get('components', '')}\n"
+        f"- **Concepts Involved:** {seed.get('concepts', '')}\n\n"
+    )
+    return header + body.strip() + "\n"
+
 def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> Tuple[Dict, str]:
     """
     Select the next blueprint guaranteed to be 100% unique compared to all past dispatches.
@@ -1162,13 +1209,9 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
         candidate_seed = dict(seed)
         candidate_seed["body"] = body
 
-        # Validate with uniqueness engine
-        mock_header = (
-            f"# ⚡ 2026-10-12 - Dispatch #{series_day}: {candidate_seed['title']}\n\n"
-            f"- **Target Domain:** {candidate_seed['domain']}\n"
-            f"- **Framework Used:** {candidate_seed['framework']}\n"
-        )
-        is_unique, reason = uniqueness.verify_dispatch_uniqueness(mock_header + body, past_dispatches)
+        # Validate with uniqueness engine using full candidate layout
+        candidate_doc = build_candidate_verification_content(series_day, candidate_seed, body)
+        is_unique, reason = uniqueness.verify_dispatch_uniqueness(candidate_doc, past_dispatches)
         if is_unique:
             return candidate_seed, body
 
@@ -1203,43 +1246,169 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
                 body = synthesize_procedural_blueprint_body(candidate_seed)
                 candidate_seed["body"] = body
 
-                mock_header = (
-                    f"# ⚡ 2026-10-12 - Dispatch #{series_day}: {candidate_seed['title']}\n\n"
-                    f"- **Target Domain:** {candidate_seed['domain']}\n"
-                    f"- **Framework Used:** {candidate_seed['framework']}\n"
-                )
-                is_unique, reason = uniqueness.verify_dispatch_uniqueness(mock_header + body, past_dispatches)
+                candidate_doc = build_candidate_verification_content(series_day, candidate_seed, body)
+                is_unique, reason = uniqueness.verify_dispatch_uniqueness(candidate_doc, past_dispatches)
                 if is_unique:
                     return candidate_seed, body
 
     # 3. Dynamic fail-safe: synthesize with distinct salt to guarantee 100% uniqueness
     FAILSAFE_THEMES = {
         "A": [
-            ("Decoupled Speculative Verification Engine", "Dynamic Attention Speculation & Paged Tensor Pools", "FlashInfer Tree-Based Speculative Sieve"),
-            ("Asynchronous Tensor-Parallel Loss Optimizer", "Tensor-Parallel Loss Slicing & Rescaling Mesh", "Megatron Fused Softmax Cross-Entropy"),
-            ("Heterogeneous Low-Precision Quantization Matrix", "Quantization Outlier Suppression Mesh", "SmoothQuant Int8 Virtualization Sieve"),
+            (
+                "Decoupled Speculative Verification Engine",
+                "Dynamic Attention Speculation & Paged Tensor Pools",
+                "FlashInfer Tree-Based Speculative Sieve",
+                "PyTorch Distributed, FlashInfer CUDA Kernels, OpenLineage",
+                "Speculative token tree verification stalls and KV-cache fragmentation during multi-token draft rollouts",
+                "NCCL Point-to-Point Paged Tensor Stream / CUDA IPC",
+                "OpenLineage speculative verification facets auditing draft acceptance rate and KV-block allocation",
+                "Speculative Tree Verifier, KV-Cache Block Pager, Draft Token Filter Pod",
+                "Tree Attention Speculation, KV-Block Paging, Asynchronous CUDA Stream Overlap, Draft Verification"
+            ),
+            (
+                "Asynchronous Tensor-Parallel Loss Optimizer",
+                "Tensor-Parallel Loss Slicing & Rescaling Mesh",
+                "Megatron Fused Softmax Cross-Entropy",
+                "Megatron-LM, PyTorch Distributed, CUDA Graphs, OpenLineage",
+                "Vocabulary partition all-reduce latency and cross-node gradient synchronization overhead",
+                "Torch C10D Collective Stream / RoCEv2 RDMA",
+                "OpenLineage loss scaling facets logging partition gradient norms and backward communication overlap",
+                "Fused Softmax Rescaler, Cross-Entropy Slicer, Ring All-Reduce Worker",
+                "Parallel Loss Partitioning, Vocabulary Sharding, In-Flight Gradient Reduction, Non-Blocking AllReduce"
+            ),
+            (
+                "Heterogeneous Low-Precision Quantization Matrix",
+                "Quantization Outlier Suppression Mesh",
+                "SmoothQuant Int8 Virtualization Sieve",
+                "vLLM, TensorRT-LLM, SmoothQuant Kernels, OpenLineage",
+                "Activation outlier channel dynamic range saturation and weight quantization degradation",
+                "Zero-Copy Shared Memory IPC / gRPC Wire Format",
+                "OpenLineage quantization metrics tracking per-channel clipping thresholds and scaling factors",
+                "Outlier Suppression Transform, Int8 Matrix Multiplier, Scale Invariant Quantizer",
+                "Channel-Wise Smoothing, Outlier Decoupling, Fused Dequantization GEMM, Activation Clipping"
+            ),
         ],
         "B": [
-            ("Kernel-Bypass Polled Ingress Reactor", "Kernel-Bypass Polled Ingress Queues", "DPDK PMD Zero-Copy Memory Splicer"),
-            ("Hardware-Offloaded eBPF Flow Director Mesh", "Hardware-Attested Flow Classification", "Cilium eBPF XDP Hardware Classifier"),
-            ("Distributed io_uring Socket Multiplexer", "io_uring Multi-Queue Socket Concurrency", "Linux Kernel io_uring SQPOLL Engine"),
+            (
+                "Kernel-Bypass Polled Ingress Reactor",
+                "Kernel-Bypass Polled Ingress Queues",
+                "DPDK PMD Zero-Copy Memory Splicer",
+                "DPDK, Hugepages, C/C++ Native Extension, Prometheus Metrics",
+                "PCIe memory bus thrashing and TLB miss cascades during 40Gbps line-rate ingress packet batching",
+                "Ethernet Frame / Raw L2-L4 Packet Bursts over DPDK PMD",
+                "OpenTelemetry DPDK ring metrics tracking ring buffer fill watermarks and core IPC execution rates",
+                "Hugepage Memory Pool Allocator, Lockless rte_ring Poller, NUMA-Aware Core Pinner",
+                "Kernel-Bypass Polled Mode, 1GB Hugepage Memory Slicing, Lockless SPSC Rings, NUMA Locality"
+            ),
+            (
+                "Hardware-Offloaded eBPF Flow Director Mesh",
+                "Hardware-Attested Flow Classification",
+                "Cilium eBPF XDP Hardware Classifier",
+                "eBPF, Linux Kernel XDP, OpenTelemetry Tracing, Prometheus Exporter",
+                "Kernel context-switching overhead and socket buffer lock contention under 100Gbps line-rate packet bursts",
+                "AF_XDP (Zero-Copy Socket Ring Interface) / gRPC Wire Format",
+                "OpenTelemetry eBPF trace hooks logging per-packet drop metrics and ring buffer fill ratios",
+                "XDP Filter Kernel Program, Ring Buffer User-Space Poller, Mock Packet Generator",
+                "Zero-copy packet processing, Ring buffer lock-free concurrency, Kernel memory pinning, Ingress rate-limiting"
+            ),
+            (
+                "Distributed io_uring Socket Multiplexer",
+                "io_uring Multi-Queue Socket Concurrency",
+                "Linux Kernel io_uring SQPOLL Engine",
+                "io_uring, Rust tokio, Linux 6.x Kernel, OpenTelemetry",
+                "System call context switch overhead and synchronous epoll wakeups under 1M concurrent TCP streams",
+                "TCP Stream Framing / io_uring Zero-Copy Ring Buffers",
+                "OpenTelemetry network traces tracking submission queue drops and completion ring latencies",
+                "SQPOLL Kernel Thread Worker, Fixed Buffer Registered Ring, Asynchronous Socket Sifter",
+                "Kernel Submission Polling, Registered Buffer Rings, Zero-Syscall I/O, Core Affinity"
+            ),
         ],
         "C": [
-            ("Vectorized Columnar Storage Pruning Engine", "Columnar Pruning & Micro-Partitions", "Arrow DataFusion Distributed Query Core"),
-            ("Zero-Copy Delta Streaming Ingestion Sieve", "Delta Stream Ingestion & Parquet Splicing", "Apache Iceberg Vectorized Split Reader"),
-            ("Distributed Columnar Metadata Compactor", "Columnar Metadata Index Acceleration", "DuckDB In-Memory Partition Engine"),
+            (
+                "Vectorized Columnar Storage Pruning Engine",
+                "Columnar Pruning & Micro-Partitions",
+                "Arrow DataFusion Distributed Query Core",
+                "Apache Arrow, DataFusion, Parquet, Rust, MinIO",
+                "Cold object storage GET amplification and unindexed metadata manifest scanning stalls",
+                "Arrow Flight RPC / Object Storage Byte-Range Stream",
+                "OpenLineage dataset facets recording dictionary prune ratios and micro-partition skips",
+                "Vectorized Expression Evaluator, Page Index Sifter, Column Chunk Buffer Pool",
+                "Vectorized Scan Predicates, Page Index Pruning, Split-Block Bloom Filters, Zero-Copy Arrow Buffers"
+            ),
+            (
+                "Zero-Copy Delta Streaming Ingestion Sieve",
+                "Delta Stream Ingestion & Parquet Splicing",
+                "Apache Iceberg Vectorized Split Reader",
+                "Apache Iceberg, Apache Parquet, DuckDB, MinIO",
+                "Small file explosion and optimistic concurrency commit collisions on distributed table manifests",
+                "Arrow IPC Stream Protocol / S3 REST API",
+                "OpenLineage execution facets tracking Parquet file compaction and snapshot commit latencies",
+                "Vectorized Split Reader, Manifest Compactor, Metadata Snapshot Allocator",
+                "Iceberg Metadata Snapshots, Vectorized File Slicing, Asynchronous Compaction, Parquet Page Index"
+            ),
+            (
+                "Distributed Columnar Metadata Compactor",
+                "Columnar Metadata Index Acceleration",
+                "DuckDB In-Memory Partition Engine",
+                "DuckDB, Arrow, Parquet, Python Native Extensions",
+                "Manifest file tree traversal stalls and recursive directory listing latency on cloud storage",
+                "DuckDB In-Memory Arrow Stream / Parquet Footer Bytes",
+                "OpenLineage audit logs measuring metadata parse speed and footprint reduction ratio",
+                "Footer Cache Allocator, Pushdown Filter Engine, In-Memory Column Indexer",
+                "Parquet Footer Caching, In-Memory Catalog Pruning, Pushdown Predicate Compilation, Columnar Encodings"
+            ),
         ],
         "D": [
-            ("Zero-Knowledge Cryptographic Witness Verifier", "ZK Witness Generation & Audit Verification", "Halo2 Polynomial Commitment Verifier"),
-            ("Hardware-Enclaved Sovereign Identity Mesh", "Sovereign Confidential Computing Enclaves", "AMD SEV-SNP Hardware Memory Attestation"),
-            ("Verifiable Multi-Party Threshold Attestation Core", "Verifiable Threshold Signatures & Ledger", "FROST Schnorr Threshold Signer Engine"),
+            (
+                "Zero-Knowledge Cryptographic Witness Verifier",
+                "ZK Witness Generation & Audit Verification",
+                "Halo2 Polynomial Commitment Verifier",
+                "Halo2, Rust Cryptography, BLS12-381 Pairings, OpenLineage",
+                "Proof synthesis quadratic delay and witness generation memory consumption for complex compliance circuits",
+                "mTLS 1.3 / Binary Snark Proof Stream Protocol",
+                "OpenLineage compliance facets auditing witness commitment hashes and proof verification duration",
+                "Polynomial Commitment Verifier, Witness Column Sieve, Gate Constraint Evaluator",
+                "PLONKish Arithmetization, Polynomial Commitments, Zero-Knowledge Non-Disclosure, Enclave Memory Isolation"
+            ),
+            (
+                "Hardware-Enclaved Sovereign Identity Mesh",
+                "Sovereign Confidential Computing Enclaves",
+                "AMD SEV-SNP Hardware Memory Attestation",
+                "AMD SEV-SNP, Intel SGX, Rust Enclave SDK, OpenLineage",
+                "Hypervisor privilege escalation risks and untrusted host physical memory introspection",
+                "gRPC over Attested TLS (aTLS) with Hardware Measurement Quotes",
+                "OpenLineage HIPAA audit logs tracking remote attestation endorsements and enclave quote nonces",
+                "Hardware Quote Generator, Attested TLS Handshaker, Secure Enclave Core Allocator",
+                "Hardware Enclave Attestation, Encrypted Memory Isolation, Hypervisor Zero-Trust, Constant-Time Execution"
+            ),
+            (
+                "Verifiable Multi-Party Threshold Attestation Core",
+                "Verifiable Threshold Signatures & Ledger",
+                "FROST Schnorr Threshold Signer Engine",
+                "FROST Threshold Signatures, Ed25519, Python Cryptography, OpenLineage",
+                "Multi-institution signature coordination roundtrips and Byzantine aborts during sovereign audit signing",
+                "gRPC mTLS 1.3 with Threshold Secret Share Protocol",
+                "OpenLineage governance events auditing round nonces, signature shares, and aggregate verification keys",
+                "Threshold Key Generator, Round Coordinator, Partial Signature Aggregator",
+                "FROST Flexible Round Protocol, Schnorr Threshold Signatures, Non-Interactive Aggregation, Byzantine Fault Tolerance"
+            ),
         ],
     }
 
     for salt_idx in range(50):
         salt_epoch = epoch_count + salt_idx
         themes = FAILSAFE_THEMES.get(target_pillar, FAILSAFE_THEMES["A"])
-        theme_title, theme_domain, theme_framework = themes[salt_idx % len(themes)]
+        (
+            theme_title,
+            theme_domain,
+            theme_framework,
+            theme_tech_stack,
+            theme_bottleneck,
+            theme_protocol,
+            theme_lineage,
+            theme_components,
+            theme_concepts,
+        ) = themes[salt_idx % len(themes)]
 
         fail_safe_seed = {
             "id": f"{target_pillar}_adaptive_{series_day}_{salt_idx}",
@@ -1247,24 +1416,20 @@ def get_next_unique_blueprint(series_day: int, past_dispatches: List[Dict]) -> T
             "title": f"{theme_title} for Architecture Tier {target_pillar} (Adaptive Series Day {series_day} Iteration {salt_idx + 1})",
             "domain": f"Pillar {target_pillar}: {theme_domain} [Series Day {series_day} Epoch {salt_epoch}]",
             "framework": f"{theme_framework} v{salt_epoch}.{salt_idx}",
-            "tech_stack": "Distributed Systems Core, OpenLineage Facets, GitHub Actions CI",
-            "bottleneck": f"Inter-node synchronization latency and queue contention under Series Day {series_day} Iteration {salt_idx + 1} workloads",
-            "protocol": "Zero-Copy RPC / Arrow Flight Protocol",
-            "lineage": f"OpenLineage execution audit facets recording adaptive run parameters for Iteration {salt_idx + 1}",
-            "components": "Vector Sieve, Asynchronous Ring Allocator, Local Validation Mock",
-            "concepts": "Zero-Copy Memory Mapping, Lock-Free Rings, Vectorized Execution, Adaptive Slicing",
+            "tech_stack": theme_tech_stack,
+            "bottleneck": theme_bottleneck,
+            "protocol": theme_protocol,
+            "lineage": theme_lineage,
+            "components": theme_components,
+            "concepts": theme_concepts,
             "badge_color": "blue" if target_pillar == "A" else ("purple" if target_pillar == "B" else ("teal" if target_pillar == "C" else "red")),
             "badge_name": f"Pillar%20{target_pillar}",
         }
         body = synthesize_procedural_blueprint_body(fail_safe_seed)
         fail_safe_seed["body"] = body
 
-        mock_header = (
-            f"# ⚡ 2026-10-12 - Dispatch #{series_day}: {fail_safe_seed['title']}\n\n"
-            f"- **Target Domain:** {fail_safe_seed['domain']}\n"
-            f"- **Framework Used:** {fail_safe_seed['framework']}\n"
-        )
-        is_unique, reason = uniqueness.verify_dispatch_uniqueness(mock_header + body, past_dispatches)
+        candidate_doc = build_candidate_verification_content(series_day, fail_safe_seed, body)
+        is_unique, reason = uniqueness.verify_dispatch_uniqueness(candidate_doc, past_dispatches)
         if is_unique:
             return fail_safe_seed, body
 
