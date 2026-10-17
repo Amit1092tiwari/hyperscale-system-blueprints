@@ -59,10 +59,11 @@ graph TD
             LWEIngress --> ModSwitch["Modulus Switching<br/>Scale Modulus q to 2N"]
             ModSwitch --> BlindRotate["Blind Polynomial Rotation<br/>Accumulator Ring T[X] / (X^N + 1)"]
             BlindRotate --> ExternalProduct["GGSW External Product<br/>Fourier Ring Multiplication"]
-            ExternalProduct --> SampleExtract["Sample Extract Index 0<br/>Resets Noise to Base Sigma"]
+            ExternalProduct --> SampleExtract["Sample Extract: RLWE -> LWE_N<br/>Index 0 & Negacyclic Vector"]
+            SampleExtract --> KeySwitch["KeySwitch: LWE_N -> LWE_n<br/>KSK Keyswitching Step"]
         end
         
-        SampleExtract --> CleanLWE["Refreshed LWE Ciphertext<br/>Noise Reset: Var(e) < 2^-30"]
+        KeySwitch --> CleanLWE["Refreshed LWE Ciphertext<br/>Noise Reset: Var(e) < 2^-30"]
         CleanLWE --> HomomorphicGate["Homomorphic Splicing Gate<br/>Encrypted Variant Comparison"]
     end
 
@@ -103,6 +104,7 @@ Sovereign Lab         Enclave Gateway         Torus PBS Core         Noise Audit
     │                       │                       │── 3. BlindRotate ────>│
     │                       │                       │   (FFT Acc Ring)      │
     │                       │                       │<── 4. FreshLWE ───────│
+    │                       │                       │   (SampleExtract+KSK) │
     │                       │                       │   (Var(e) reset)      │
     │                       │                       │                       │
     │                       │                       │── 5. LogNoiseFacet ──>│
@@ -115,6 +117,7 @@ Sovereign Lab         Enclave Gateway         Torus PBS Core         Noise Audit
 1. **Bounded Error Probability Invariant:** The noise variance $\sigma^2$ across all homomorphic gates must remain strictly bounded below $\sigma_{\max}^2 \le 2^{-24}$ to ensure a false decryption probability of $P(\text{error}) < 2^{-64}$.
 2. **Hardware Attestation Integrity:** Prior to dispatching encrypted patient ciphertexts, the client must verify the cryptographic hardware quote issued by the AMD SEV-SNP / Intel SGX security processor, validating enclaved memory encryption.
 3. **Zero Information Leakage Invariant:** Blind polynomial rotation must evaluate test polynomials using lookup tables without exposing intermediate plaintext branch conditions or access patterns to cache side-channel attacks.
+4. **Post-PBS KeySwitching Completeness:** Sample extraction outputs an LWE ciphertext of ring dimension $N$; transitioning back to input dimension $n$ requires a Keyswitching Key (KSK) step to maintain homogeneous gate composition.
 
 ---
 
@@ -136,7 +139,8 @@ Sovereign Lab         Enclave Gateway         Torus PBS Core         Noise Audit
                                              │
                                              ├── 1. Modulus Switch: Scale q -> 2N
                                              ├── 2. Blind Polynomial Rotation: T[X]/(X^N+1)
-                                             └── 3. Sample Extract: Noise Reset to Base Sigma
+                                             ├── 3. Sample Extract: RLWE -> LWE_N
+                                             └── 4. Post-PBS KeySwitch: KSK LWE_N -> LWE_n
                                              │
                                              ▼
        [Emit OpenLineage HIPAA Cryptographic Facet]
@@ -156,8 +160,9 @@ flowchart TD
     
     PBS --> ModSwitch["1. Modulus Switching (Scale to 2N)"]
     ModSwitch --> BlindRot["2. Blind Rotation via External Product"]
-    BlindRot --> SampleExt["3. Sample Extract (Index 0)"]
-    SampleExt --> NoiseReset["🔄 Noise Floor Reset<br/>Var(e) < 2^-30"]
+    BlindRot --> SampleExt["3. Sample Extract (RLWE -> LWE_N)"]
+    SampleExt --> KeySwitch["4. Post-PBS KeySwitch (KSK LWE_N -> LWE_n)"]
+    KeySwitch --> NoiseReset["🔄 Noise Floor Reset<br/>Var(e) < 2^-30"]
     NoiseReset --> EvalGate
     
     EvalGate --> LineageEmit["📜 Emit OpenLineage HIPAA Noise Facet"]
