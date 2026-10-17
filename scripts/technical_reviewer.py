@@ -337,16 +337,22 @@ def fix_tfhe_cryptographic_defects(content: str) -> Tuple[str, List[str]]:
             )
             fixes.append("Initialized simulated Bootstrapping Key (BSK) inside enclave perimeter")
 
-        # 2. Torus NAND phase centering calibration
-        if "b_nand = (0.625 - ct1.b - ct2.b) % 1.0" in new_content:
-            new_content = new_content.replace(
-                "        b_nand = (0.625 - ct1.b - ct2.b) % 1.0",
-                "        # Standard TFHE NAND offset: mu = 1/8 (0.125)\n        b_nand = (0.125 - ct1.b - ct2.b) % 1.0"
-            )
-            # Update LUT poly to full 0.125
+        # 2. Torus NAND phase centering calibration and anti-periodic step LUT
+        if "b_nand = (0.625 - ct1.b - ct2.b) % 1.0" in new_content or "b_nand = (0.125 - ct1.b - ct2.b) % 1.0" in new_content:
             new_content = re.sub(
-                r"lut_poly\[i\]\s*=\s*0\.25\s+if\s+i\s*<\s*\(self\.N\s*//\s*2\)\s+else\s+0\.0",
-                "lut_poly[i] = 0.125",
+                r"(\s*)b_nand\s*=\s*\((?:0\.625|0\.125)\s*-\s*ct1\.b\s*-\s*ct2\.b\)\s*%\s*1\.0",
+                r"\1# Optimal phase centering with mu in {+1/8, -1/8}: offset = 7/8 (0.875)\n\1# Yields symmetric +-N/4 noise margins for (0,0), (0,1), (1,0) -> 1 and (1,1) -> 0\n\1b_nand = (0.875 - ct1.b - ct2.b) % 1.0",
+                new_content
+            )
+            # Update LUT poly to anti-periodic step function: [0, N/2) -> 0.125, [N/2, N) -> 0.875
+            new_content = re.sub(
+                r"lut_poly\[i\]\s*=\s*(?:0\.25\s+if\s+i\s*<\s*\(self\.N\s*//\s*2\)\s+else\s+0\.0|0\.125)",
+                "lut_poly[: self.N // 2] = 0.125\n        lut_poly[self.N // 2 :] = 0.875",
+                new_content
+            )
+            new_content = re.sub(
+                r"for\s+i\s+in\s+range\(self\.N\):\s*\n\s*lut_poly\[:\s*self\.N\s*//\s*2\]\s*=\s*0\.125\s*\n\s*lut_poly\[self\.N\s*//\s*2\s*:\]\s*=\s*0\.875",
+                "lut_poly[: self.N // 2] = 0.125\n        lut_poly[self.N // 2 :] = 0.875",
                 new_content
             )
             # Update encryption/decryption encoding to standard TFHE (+1/8 for 1, -1/8 = 0.875 for 0)
@@ -360,7 +366,7 @@ def fix_tfhe_cryptographic_defects(content: str) -> Tuple[str, List[str]]:
                     "dist_1 = min(abs(phase - 0.125), 1.0 - abs(phase - 0.125))\n        dist_0 = min(abs(phase - 0.875), 1.0 - abs(phase - 0.875))",
                     new_content
                 )
-            fixes.append("Calibrated Torus NAND affine offset (0.125) and standard TFHE phase encoding (+1/8 vs -1/8)")
+            fixes.append("Calibrated Torus NAND affine offset (0.875) and anti-periodic step function LUT ([0, N/2) -> 0.125, [N/2, N) -> 0.875)")
 
         # 3. Correct homomorphic XNOR calculation in evaluate_splice_site_match
         if "xnor_out = self.homomorphic_nand(nand2, nand3)" in new_content and "xor_out" not in new_content:
@@ -371,16 +377,32 @@ def fix_tfhe_cryptographic_defects(content: str) -> Tuple[str, List[str]]:
             )
             fixes.append("Corrected homomorphic splice-site comparator to evaluate true XNOR via XOR inversion")
 
-        # 4. Negacyclic sample extraction index reversal
-        if re.search(r"for\s+i\s+in\s+range\(\s*min\(\s*self\.n,\s*self\.N\s*\)\s*\):\s*\n\s*new_a\[i\]\s*=\s*acc_b\[i\]", new_content):
+        # 4. Strict canonical Torus float modulo in monomial multiplication
+        if "return result" in new_content and "np.mod(np.mod(result, 1.0) + 1.0, 1.0)" not in new_content:
+            new_content = new_content.replace(
+                "return result",
+                "return np.mod(np.mod(result, 1.0) + 1.0, 1.0)"
+            )
+            fixes.append("Enforced strict canonical Torus float modulo [0.0, 1.0) in negacyclic monomial multiplication")
+
+        # 5. Populate active RLWE accumulator A(X) mask
+        if "acc_a = np.zeros(self.N, dtype=np.float64)" in new_content:
+            new_content = new_content.replace(
+                "acc_a = np.zeros(self.N, dtype=np.float64)",
+                "# Simulated RLWE mask polynomial A(X) in R_q: actively populated and rotated\n        acc_a = np.random.uniform(0.0, 1.0, size=self.N)"
+            )
+            fixes.append("Activated simulated RLWE mask polynomial (acc_a) in external product accumulator")
+
+        # 6. Negacyclic sample extraction index reversal from acc_a
+        if re.search(r"for\s+i\s+in\s+range\(\s*min\(\s*self\.n,\s*self\.N\s*\)\s*\):\s*\n\s*new_a\[i\]\s*=\s*acc_[ab]\[i\]", new_content):
             new_content = re.sub(
-                r"(\s*)for\s+i\s+in\s+range\(\s*min\(\s*self\.n,\s*self\.N\s*\)\s*\):\s*\n\s*new_a\[i\]\s*=\s*acc_b\[i\].*?(?=\n)",
-                r"\1# Standard TFHE negacyclic sample extraction mapping with index reversal:\n\1# a_{ext, 0} = acc_b[0], a_{ext, i} = -acc_b[N - i] mod 1.0 for i in 1..n-1\n\1if self.n > 0:\n\1    new_a[0] = acc_b[0]\n\1    for i in range(1, min(self.n, self.N)):\n\1        new_a[i] = float((-acc_b[self.N - i]) % 1.0)",
+                r"(\s*)for\s+i\s+in\s+range\(\s*min\(\s*self\.n,\s*self\.N\s*\)\s*\):\s*\n\s*new_a\[i\]\s*=\s*acc_[ab]\[i\].*?(?=\n)",
+                r"\1# Standard TFHE negacyclic sample extraction mapping with index reversal from A(X):\n\1# a_{ext, 0} = acc_a[0], a_{ext, i} = -acc_a[N - i] mod 1.0 for i in 1..n-1\n\1if self.n > 0:\n\1    new_a[0] = acc_a[0]\n\1    for i in range(1, min(self.n, self.N)):\n\1        new_a[i] = float((-acc_a[self.N - i]) % 1.0)",
                 new_content
             )
-            fixes.append("Standardized TFHE sample extraction with negacyclic coefficient mapping: a_{ext, i} = -acc[N - i]")
+            fixes.append("Standardized TFHE sample extraction with negacyclic coefficient mapping from A(X): a_{ext, i} = -acc_a[N - i]")
 
-        # 5. Form valid masked Torus LWE ciphertext in sample extraction
+        # 7. Form valid masked Torus LWE ciphertext in sample extraction
         if "new_b = float(acc_b[0] + noise_reset) % 1.0" in new_content:
             new_content = new_content.replace(
                 "new_b = float(acc_b[0] + noise_reset) % 1.0",
@@ -388,7 +410,7 @@ def fix_tfhe_cryptographic_defects(content: str) -> Tuple[str, List[str]]:
             )
             fixes.append("Constructed valid masked Torus LWE sample in PBS extraction (new_b = dot(new_a, s) + evaluated_val + noise)")
 
-        # 6. Update gate count for 5-NAND XNOR logic
+        # 8. Update gate count for 5-NAND XNOR logic
         if "gate_count += 4\n            peak_noise = max(peak_noise, xnor_out.noise_variance)" in new_content:
             new_content = new_content.replace(
                 "gate_count += 4\n            peak_noise = max(peak_noise, xnor_out.noise_variance)",
@@ -396,13 +418,14 @@ def fix_tfhe_cryptographic_defects(content: str) -> Tuple[str, List[str]]:
             )
             fixes.append("Updated homomorphic comparator gate counter to 5 NANDs per XNOR evaluation")
 
-        # 7. Calibrate PBS unit test LUT polynomial to standard TFHE phase
-        if "lut[: self.engine.N // 2] = 0.25" in new_content:
-            new_content = new_content.replace(
-                "        lut = np.zeros(self.engine.N, dtype=np.float64)\n        lut[: self.engine.N // 2] = 0.25  # Identity LUT for bit 1",
-                "        # In standard TFHE, identity test polynomial for bit 1 is mu = +1/8 (0.125)\n        lut = np.full(self.engine.N, 0.125, dtype=np.float64)"
+        # 9. Calibrate PBS unit test LUT polynomial to standard TFHE step phase
+        if "lut[: self.engine.N // 2] = 0.25" in new_content or "lut = np.full(self.engine.N, 0.125, dtype=np.float64)" in new_content:
+            new_content = re.sub(
+                r"(\s*)lut\s*=\s*(?:np\.zeros\(self\.engine\.N,\s*dtype=np\.float64\)\s*\n\s*lut\[:\s*self\.engine\.N\s*//\s*2\]\s*=\s*0\.25.*|np\.full\(self\.engine\.N,\s*0\.125,\s*dtype=np\.float64\))",
+                r"\1# Identity step LUT for Torus PBS: [0, N/2) -> +1/8 (0.125), [N/2, N) -> -1/8 (0.875)\n\1lut = np.zeros(self.engine.N, dtype=np.float64)\n\1lut[: self.engine.N // 2] = 0.125\n\1lut[self.engine.N // 2 :] = 0.875",
+                new_content
             )
-            fixes.append("Calibrated PBS unit test LUT polynomial to standard TFHE phase constant (0.125)")
+            fixes.append("Calibrated PBS unit test LUT polynomial to anti-periodic step function ([0, N/2) -> 0.125, [N/2, N) -> 0.875)")
 
     return new_content, fixes
 
