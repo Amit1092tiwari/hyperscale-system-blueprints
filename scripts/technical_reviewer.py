@@ -558,7 +558,7 @@ def fix_arrow_flight_spillway_defects(content: str) -> Tuple[str, List[str]]:
             fixes.append("Implemented atomic two-phase spill staging (.spill.tmp -> .spill) to prevent uncoordinated reader/compactor corruption")
 
         # 4. Two-phase compaction staging: .spill -> .compacting -> .parquet
-        if 'compacting_path = ipc_path.with_suffix(".compacting")' not in new_content and "def _compact_file(" in new_content:
+        if 'compacting_path = ipc_path.with_suffix(".compacting")' not in new_content and "_compact_segments" not in new_content and "def _compact_file(" in new_content:
             old_compact = '''    def _compact_file(self, ipc_path: Path):
         """Converts an IPC spill file into a compressed Parquet micro-partition."""
         if not ipc_path.exists():
