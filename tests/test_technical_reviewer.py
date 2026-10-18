@@ -230,6 +230,88 @@ class EnclaveTFHEEngine:
         self.assertGreaterEqual(len(fixes), 5)
 
 
+    def test_senior_peer_evaluation_pillar_c_flight_sql(self):
+        meta_c = {"pillar": "C", "title": "Zero-Copy Arrow Flight SQL Spillway"}
+        eval_c = tr.evaluate_senior_peer_architecture("arrow flight sql parquet compaction", meta_c)
+        self.assertIn("Principal Data Systems Architect", eval_c["reviewer_title"])
+        self.assertIn("Zero-Copy Arrow Flight SQL", eval_c["focus_areas"])
+        self.assertIn("Parquet Micro-Partition Compaction", eval_c["focus_areas"])
+        matrix_titles = [m[0] for m in eval_c["matrix"]]
+        self.assertIn("Memory Alignment Invariants", matrix_titles)
+        self.assertIn("Decoupled Spillway & Ingestion", matrix_titles)
+        self.assertIn("Compaction Economics & Parquet Slicing", matrix_titles)
+        self.assertIn("off-heap buffer tracking", eval_c["critique"])
+        self.assertTrue(any("total_allocated_bytes" in desc for _, desc in eval_c["matrix"]))
+
+    def test_fix_arrow_flight_spillway_defects_end_to_end(self):
+        flawed = '''
+class VectorizedSpillwayManager:
+    def __init__(self, spillway_dir: str, memory_threshold_mb: float = 128.0):
+        self.spillway_dir = Path(spillway_dir)
+        self.spillway_dir.mkdir(parents=True, exist_ok=True)
+        self.memory_threshold_mb = memory_threshold_mb
+        self.active_spills: List[Path] = []
+        self.compacted_partitions: List[Path] = []
+        self._lock = threading.Lock()
+        self._stop_compactor = threading.Event()
+        self._spill_queue: List[Path] = []
+        self._compactor_thread = threading.Thread(
+            target=self._compaction_loop, daemon=True
+        )
+        self._compactor_thread.start()
+
+    def should_spill(self) -> bool:
+        process = psutil.Process(os.getpid())
+        rss_mb = process.memory_info().rss / (1024 * 1024)
+        return rss_mb > self.memory_threshold_mb
+
+    def spill_record_batch(self, batch: pa.RecordBatch) -> Path:
+        spill_file = self.spillway_dir / f"spill_{time.time_ns()}_{os.getpid()}.ipc"
+        
+        sink = pa.OSFile(str(spill_file), mode="wb")
+        with pa.ipc.new_file(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        sink.close()
+
+        with self._lock:
+            self.active_spills.append(spill_file)
+            self._spill_queue.append(spill_file)
+
+        return spill_file
+
+    def _compact_file(self, ipc_path: Path):
+        if not ipc_path.exists():
+            return
+
+        with pa.OSFile(str(ipc_path), "rb") as source:
+            reader = pa.ipc.open_file(source)
+            table = reader.read_all()
+
+        output_parquet = (
+            self.spillway_dir / f"partition_{ipc_path.stem}.snappy.parquet"
+        )
+        pq.write_table(
+            table,
+            output_parquet,
+            compression="snappy",
+            row_group_size=5_000,
+            use_dictionary=True,
+        )
+
+        with self._lock:
+            self.compacted_partitions.append(output_parquet)
+
+        if ipc_path.exists():
+            ipc_path.unlink()
+'''
+        fixed, fixes = tr.fix_arrow_flight_spillway_defects(flawed)
+        self.assertIn("pa.total_allocated_bytes()", fixed)
+        self.assertIn("_recover_staged_spills", fixed)
+        self.assertIn(".spill.tmp", fixed)
+        self.assertIn(".compacting", fixed)
+        self.assertGreaterEqual(len(fixes), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
 
