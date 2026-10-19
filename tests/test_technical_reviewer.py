@@ -311,6 +311,80 @@ class VectorizedSpillwayManager:
         self.assertIn(".compacting", fixed)
         self.assertGreaterEqual(len(fixes), 3)
 
+    def test_senior_peer_evaluation_pillar_d_sev_snp(self):
+        meta_d = {"pillar": "D", "title": "Hardware-Enclaved Sovereign Identity Mesh"}
+        content = "## 1. System Parameters\nAMD SEV-SNP remote attestation and aTLS reverse map table"
+        eval_d = tr.evaluate_senior_peer_architecture(content, meta_d)
+        self.assertIn("Principal Cryptographic Systems Architect", eval_d["reviewer_title"])
+        self.assertIn("AMD SEV-SNP Remote Attestation", eval_d["focus_areas"])
+        self.assertIn("Reverse Map Table (RMP) Isolation", eval_d["focus_areas"])
+        matrix_titles = [m[0] for m in eval_d["matrix"]]
+        self.assertIn("Hardware Memory Encryption & Reverse Map Table (RMP)", matrix_titles)
+        self.assertIn("Cryptographic Quote Attestation & VCEK Chain of Trust", matrix_titles)
+        self.assertIn("Attested TLS (aTLS) Handshake Binding", matrix_titles)
+        self.assertIn("HIPAA/GDPR Audit Lineage & Nonce Entropy", matrix_titles)
+        self.assertIn("SEV-SNP", eval_d["critique"])
+
+    def test_fix_sev_snp_attestation_defects_end_to_end(self):
+        flawed = '''
+## 6. Architectural Drill
+2. The `ReportData` matches the SHA-384 hash of the client's handshake nonce concatenated with the enclave's ephemeral TLS public key.
+
+## 7. Production-Grade Executable Artifact
+REPORT_DATA_SIZE = 64          # User-defined data for attestation binding
+AMD_ARK_ASK_ROOT_ID = "AMD-SEV-SNP-ARK-ASK-ROOT-2026"
+
+class ReverseMapTableViolation(Exception):
+    """Raised when physical address memory tagging fails consistency checks."""
+    pass
+
+class SEVSNPAttestationReport:
+    def serialize_body(self) -> bytes:
+        """Serializes the report body excluding the final signature bytes for verification."""
+        header = struct.pack(
+            "<IIQ16s16sIIQQII",
+            self.version,
+            self.guest_svn,
+            self.policy,
+            self.family_id,
+            self.image_id,
+            self.vmpl,
+            self.signature_algo,
+            self.platform_info,
+            self.platform_version,
+            self.author_key_en,
+            0,  # Reserved padding
+        )
+        return (
+            header
+            + self.report_data
+            + self.measurement
+            + self.host_data
+            + self.id_key_digest
+            + self.author_key_digest
+            + self.report_id
+            + self.report_id_ma
+            + struct.pack("<QQ", self.reported_tcb, self.committed_tcb)
+            + self.chip_id
+            + struct.pack("<BBB", self.current_build, self.current_minor, self.current_major)
+        )
+
+class AttestedTLSHandshaker:
+    def __init__(self, psp: MockPlatformSecurityProcessor, rmp: ReverseMapTableController) -> None:
+        self.psp = psp
+        self.rmp = rmp
+        self.ephemeral_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
+'''
+        fixed, fixes = tr.fix_sev_snp_attestation_defects(flawed)
+        self.assertIn("SEV_SNP_REPORT_BODY_SIZE = 672", fixed)
+        self.assertIn("SEV_SNP_REPORT_TOTAL_SIZE = 1184", fixed)
+        self.assertIn("CertificateRevocationError", fixed)
+        self.assertIn("SessionTicket", fixed)
+        self.assertIn("def serialize(self)", fixed)
+        self.assertIn("from_bytes", fixed)
+        self.assertIn("SHA-512", fixed)
+        self.assertGreaterEqual(len(fixes), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
