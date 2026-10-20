@@ -385,6 +385,51 @@ class AttestedTLSHandshaker:
         self.assertIn("SHA-512", fixed)
         self.assertGreaterEqual(len(fixes), 3)
 
+    def test_fix_af_xdp_umem_defects_and_peer_evaluation(self):
+        flawed = """# ⚡ AF_XDP Zero-Copy Ingress Test
+## 1. System Parameters
+- **Target Domain:** Pillar B: Cloud Platform Engineering & DevOps (AF_XDP UMEM)
+
+```mermaid
+sequenceDiagram
+    NIC->>NIC: Packet arrives; XDP program returns XDP_REDIRECT
+```
+
+```python
+import time
+
+class SPSCQueue:
+    def produce(self):
+        # Equivalent to atomic release barrier
+        self._producer_head += write_count
+
+    def consume(self):
+        # Equivalent to atomic acquire barrier
+        self._consumer_tail += read_count
+
+class XSKDescriptorRing:
+    pass
+
+class UMEMPool:
+    def __init__(self):
+        self.rx_ring = XSKDescriptorRing(512)
+        payload = struct.pack("!I", 123)
+```
+"""
+        fixed, fixes = tr.fix_af_xdp_umem_defects(flawed)
+        self.assertIn("NIC->>NIC: Packet arrives (XDP program returns XDP_REDIRECT)", fixed)
+        self.assertIn("import struct", fixed)
+        self.assertIn("class XSKTxRing(XSKDescriptorRing):", fixed)
+        self.assertIn("class XSKCompletionRing(SPSCQueue):", fixed)
+        self.assertIn("self.tx_ring = XSKTxRing(512)", fixed)
+        self.assertIn("atomic_store_explicit", fixed)
+        self.assertGreaterEqual(len(fixes), 4)
+
+        meta = tr.extract_blueprint_metadata(fixed)
+        eval_dict = tr.evaluate_senior_peer_architecture(fixed, meta)
+        self.assertIn("AF_XDP Zero-Copy UMEM", eval_dict["focus_areas"])
+        self.assertIn("Kernel-Bypass & Zero-Copy Invariants", [item[0] for item in eval_dict["matrix"]])
+
 
 if __name__ == "__main__":
     unittest.main()
