@@ -907,6 +907,14 @@ class XSKCompletionRing(SPSCQueue):
             )
             fixes.append("Documented C11/Rust acquire-release atomic ordering invariants for weakly-ordered architectures")
 
+        # 6. Fix partial starvation accounting in simulate_hardware_nic_ingress
+        if "if not free_chunks:\n            self.rx_drops += len(raw_packets)\n            return 0" in new_content:
+            new_content = new_content.replace(
+                "if not free_chunks:\n            self.rx_drops += len(raw_packets)\n            return 0",
+                "if len(free_chunks) < len(raw_packets):\n            self.rx_drops += len(raw_packets) - len(free_chunks)\n            if not free_chunks:\n                return 0"
+            )
+            fixes.append("Corrected partial Fill Ring starvation accounting in simulate_hardware_nic_ingress")
+
     if is_crlf:
         new_content = new_content.replace("\n", "\r\n")
 
