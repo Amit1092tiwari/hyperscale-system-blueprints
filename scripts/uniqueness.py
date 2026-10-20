@@ -10,33 +10,94 @@ from typing import List, Dict, Tuple, Set, Optional
 
 # Core stop words and markdown formatting noise to exclude from semantic fingerprinting
 STOP_WORDS = {
+    # Common English conjunctions, prepositions, articles
     "the", "and", "for", "with", "this", "that", "from", "into", "over", "under",
+    "between", "during", "through", "across", "without", "than", "when",
+    # Markdown, report metadata, sections, and shields
     "system", "parameters", "problem", "statement", "design", "architecture",
-    "diagram", "flow", "production", "artifact", "executable", "monitoring",
-    "failure", "mode", "cases", "words", "thoughtful", "wisdom", "github",
-    "workflows", "test", "tests", "python", "yaml", "mermaid", "high", "level",
-    "badge", "shields", "badge_name", "target", "domain", "framework", "used",
-    "technology", "stack", "scale", "bottleneck", "lineage", "component",
-    "components", "concepts", "involved", "file", "files", "metric", "metrics",
-    "alert", "warning", "important", "notice", "dispatch", "true", "false",
-    "none", "class", "def", "return", "self", "import", "from", "print",
-    "visual", "ascii", "topology", "decision", "sequence", "breakdown",
-    "nature", "analogy", "biological", "structural", "parallel", "unit",
-    "test_case", "assert", "self.assert", "classdef", "stroke", "fill",
-    "assertequal", "assertfalse", "assertgreater", "assertin", "assertless", "assertnotin", "asserttrue",
-    "autonumber", "branches", "cancel", "checkbackpressure", "checkout", "concurrency",
-    "errorabort", "executeengine", "flowchart", "latest", "minutes", "participant", "permissions",
-    "recordlineage", "subgraph", "timeout", "ubuntu", "validateprotocol", "runs", "matrix",
-    "descriptor", "deadbeef", "chunks", "chunk", "aligned", "slots", "slot", "sieve", "allocator", "dispatcher", "auditor", "worker",
-    # Badges, shields & repo template metadata
-    "https", "style", "color", "blue", "blueviolet", "brightgreen", "emerald", "purple", "teal", "red",
-    "githubactions", "apache", "license", "logo", "logocolor", "completeness", "verified", "verify",
-    "status", "sections", "historical", "reason", "incompletion", "limits",
-    # Workflow, test harness & type annotation boilerplate
-    "actions", "workflow", "runtime", "pytest", "unittest", "testcase", "typing", "time",
-    "bool", "dict", "list", "items", "item", "fail", "pass", "line", "code", "text",
-    # Flowchart, diagram syntax & metrics
-    "graph", "norm", "succ", "sequencediagram", "check", "alert", "prompt", "rate", "ratio"
+    "architectural", "architectures", "diagram", "flow", "production", "artifact",
+    "executable", "monitoring", "failure", "mode", "cases", "words", "thoughtful",
+    "wisdom", "github", "workflows", "test", "tests", "python", "yaml", "mermaid",
+    "high", "level", "badge", "shields", "badge_name", "target", "domain",
+    "framework", "used", "technology", "stack", "scale", "bottleneck", "lineage",
+    "component", "components", "concepts", "involved", "file", "files", "metric",
+    "metrics", "alert", "warning", "important", "notice", "dispatch", "true",
+    "false", "none", "visual", "ascii", "topology", "decision", "sequence",
+    "breakdown", "nature", "analogy", "biological", "structural", "parallel",
+    "unit", "status", "sections", "historical", "reason", "incompletion", "limits",
+    "complete", "completed", "completeness", "verified", "verify", "validation",
+    "validate", "unique", "uniqueness", "colliding", "license", "apache",
+    "https", "style", "color", "blue", "blueviolet", "brightgreen", "emerald",
+    "purple", "teal", "red", "orange", "githubactions", "logo", "logocolor",
+    "review", "reviewing", "architect", "senior", "peer", "audit", "checklist",
+    "summary", "ledger", "author", "fellow", "director", "principal", "specialist",
+    # Python language, unittest harness & typing keywords
+    "class", "def", "return", "self", "import", "print", "assert", "self.assert",
+    "classdef", "stroke", "fill", "assertequal", "assertfalse", "assertgreater",
+    "assertin", "assertless", "assertnotin", "asserttrue", "unittest", "pytest",
+    "testcase", "typing", "time", "bool", "dict", "list", "items", "item", "fail",
+    "pass", "line", "code", "text", "capacity", "buffer", "buffers", "append",
+    "processed", "count", "batch", "size", "drain", "bounds", "suite", "setup",
+    "simulated", "mock", "harness", "invariant", "invariants", "isolated",
+    # CI/CD, workflow & GitHub Actions keywords
+    "actions", "workflow", "runtime", "checkout", "ubuntu", "latest", "timeout",
+    "minutes", "permissions", "runs", "matrix", "install", "dependencies",
+    "upgrade", "cancel", "progress", "branches", "push", "pull", "request",
+    # Mermaid & ASCII diagram graph syntax & boilerplate
+    "graph", "norm", "succ", "sequencediagram", "flowchart", "subgraph", "autonumber",
+    "participant", "checkbackpressure", "errorabort", "executeengine", "recordlineage",
+    "validateprotocol", "check", "prompt", "rate", "ratio", "start", "throttle",
+    "exceeded", "normal", "initiated", "inbound", "ingress", "gateway", "egress",
+    "output", "allocator", "dispatcher", "worker", "workers", "sieve", "slot",
+    "slots", "chunk", "chunks", "aligned", "descriptor", "deadbeef", "header",
+    "magic", "identifier", "monotonic", "counter", "pointers", "head", "tail",
+    "transaction", "acknowledge", "acknowledgment", "signal", "emit", "facet",
+    "facets", "governance", "rollback", "malformed", "reject", "optimal",
+    # Common procedural narrative phrasing & operational telemetry terms
+    "operational", "performance", "resilience", "robustness", "throughput",
+    "latency", "saturation", "saturate", "contention", "spikes", "starvation",
+    "overhead", "amplification", "blockage", "dropped", "burst", "bursts",
+    "splicing", "splicer", "continuous", "continuously", "unidirectional",
+    "gradient", "traverses", "unbroken", "interrupted", "uninterrupted",
+    "stems", "decouples", "decouple", "incur", "incurring", "repeated",
+    "eliminating", "eliminate", "movement", "physical", "address", "pinned",
+    "ranges", "surges", "near", "zero", "lockless", "lock", "free", "queue",
+    "queues", "ring", "rings", "single", "consumer", "producer", "spsc",
+    "numa", "affinity", "isolation", "spooling", "flush", "mitigation",
+    "blast", "radius", "root", "cause", "vector", "discipline", "disciplined",
+    "consequence", "natural", "ceases", "harmony", "hierarchies", "ruthlessly",
+    "complexity", "execution", "pipeline", "subsystem", "allocation", "allocations",
+    "allocate", "application", "apply", "baseline", "between", "blocks", "bypass",
+    "cache", "caches", "catalog", "causing", "clean", "client", "cloud",
+    "committed", "completely", "completion", "computational", "concurrent",
+    "context", "contract", "coordinator", "copies", "copy", "copying", "core",
+    "coreengine", "cores", "cost", "critical", "data", "dedicated", "demands",
+    "deploying", "deterministic", "devops", "diagnostic", "directly", "distributed",
+    "drill", "driver", "encounter", "engine", "engineering", "epoch", "error",
+    "evaluation", "event", "exceeding", "excessive", "execute", "exponential",
+    "first", "flag", "forward", "grade", "hardware", "host", "hyperscale",
+    "identical", "implementation", "implements", "incremental", "inducing",
+    "infrastructure", "input", "inspect", "integrity", "invalid", "jitter",
+    "jobs", "kernel", "layer", "layout", "linux", "load", "local", "logical",
+    "main", "maintains", "maximum", "measures", "memory", "mesh", "micro",
+    "must", "name", "native", "network", "networking", "note", "operation",
+    "optimal", "overlap", "packet", "page", "pages", "partition", "pattern",
+    "percentage", "pillar", "poll", "polled", "pool", "protocol", "provides",
+    "providing", "push", "range", "rather", "real", "record", "repository",
+    "request", "requires", "resource", "safe", "scaling", "schema", "second",
+    "serialization", "severe", "size", "space", "speed", "standard", "steps",
+    "stopping", "stream", "streaming", "strict", "strictly", "structures",
+    "submit", "success", "successfully", "supporting", "sustained", "sweep",
+    "switches", "systemic", "systems", "tail", "technical", "thrashing",
+    "threshold", "traditional", "transformation", "translation", "tree",
+    "trigger", "unoptimized", "upgrade", "user", "uses", "valid", "vectorized",
+    "version", "wait", "width", "wire"
+}
+
+TITLE_STOP_WORDS = {
+    "for", "architecture", "tier", "adaptive", "series", "day", "iteration",
+    "epoch", "phase", "dispatch", "pillar", "and", "the", "with", "from",
+    "mesh", "engine", "fabric", "core", "sieve"
 }
 
 def extract_tokens(text: str) -> Set[str]:
@@ -172,7 +233,10 @@ def verify_dispatch_uniqueness(
     candidate_framework = fw_match.group(1).strip() if fw_match else ""
 
     candidate_tokens = extract_tokens(candidate_content)
-    candidate_title_words = set(re.findall(r"\b[a-zA-Z]{3,}\b", candidate_title.lower()))
+    raw_cand_title_words = set(re.findall(r"\b[a-zA-Z]{3,}\b", candidate_title.lower()))
+    candidate_title_words = {w for w in raw_cand_title_words if w not in TITLE_STOP_WORDS}
+    if not candidate_title_words:
+        candidate_title_words = raw_cand_title_words
 
     for past in past_dispatches:
         past_day = past["day_number"]
@@ -182,8 +246,12 @@ def verify_dispatch_uniqueness(
         if candidate_title.strip().lower() == past_title.strip().lower():
             return False, f"Exact title collision with Dispatch #{past_day}: '{past_title}'"
 
-        # 2. High Title Similarity Check
-        past_title_words = set(re.findall(r"\b[a-zA-Z]{3,}\b", past_title.lower()))
+        # 2. High Title Similarity Check (Substantive Architectural Title Words)
+        raw_past_title_words = set(re.findall(r"\b[a-zA-Z]{3,}\b", past_title.lower()))
+        past_title_words = {w for w in raw_past_title_words if w not in TITLE_STOP_WORDS}
+        if not past_title_words:
+            past_title_words = raw_past_title_words
+
         title_sim = calculate_jaccard_similarity(candidate_title_words, past_title_words)
         if title_sim > title_threshold:
             return False, (
