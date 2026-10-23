@@ -21,6 +21,7 @@ jobs:
   execute-architecture-generation:
     name: Generate & Sync Daily Architecture Blueprint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
 
@@ -37,12 +38,15 @@ jobs:
         cache: "pip"
 
     - name: Install Python Dependencies
+      timeout-minutes: 5
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Execute Daily Wisdom Generator via Gemini Pro
+      timeout-minutes: 5
       env:
+        PYTHONUNBUFFERED: "1"
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         GEMINI_MODEL: ${{ inputs.model || 'gemini-3.8-flash' }}
       run: |
@@ -50,6 +54,7 @@ jobs:
         ./scripts/run_daily_wisdom.sh
 
     - name: Commit and Push Generated Blueprint to Repository
+      timeout-minutes: 5
       run: |
         git config --global user.name "Amitkumar_Tiwari"
         git config --global user.email "69420529+Amit1092tiwari@users.noreply.github.com"

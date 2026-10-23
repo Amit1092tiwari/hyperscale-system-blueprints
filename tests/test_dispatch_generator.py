@@ -214,6 +214,36 @@ class TestDispatchGenerator(unittest.TestCase):
                 result = gd.attempt_model_generation("mock-key", "gemini-3.8-flash", "test-prompt", max_retries=1)
                 self.assertIsNone(result, "Should return None on exhausted 503 retries without throwing uncaught exception")
 
+    def test_attempt_model_generation_handles_sdk_timeout(self):
+        """Verify that SDK timeout gracefully falls through to REST API without hanging."""
+        from unittest.mock import patch
+        import concurrent.futures
+
+        with patch("generate_dispatch.generate_via_google_genai_sdk", side_effect=concurrent.futures.TimeoutError("SDK call timed out")):
+            with patch("generate_dispatch.generate_via_rest_api", return_value="REST API Fallback Success Content") as mock_rest:
+                result = gd.attempt_model_generation("mock-key", "gemini-3.8-flash", "test-prompt", max_retries=1)
+                self.assertEqual(result, "REST API Fallback Success Content")
+                mock_rest.assert_called_once()
+
+    def test_attempt_model_generation_aborts_immediately_on_400_and_403(self):
+        """Verify that non-retryable 400 (bad argument/API key) and 403 (quota/forbidden) abort retries."""
+        from unittest.mock import patch
+        import urllib.error
+
+        mock_400 = urllib.error.HTTPError(
+            url="https://generativelanguage.googleapis.com",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=None
+        )
+
+        with patch("generate_dispatch.generate_via_google_genai_sdk", side_effect=RuntimeError("API_KEY_INVALID: 400")):
+            with patch("generate_dispatch.generate_via_rest_api", side_effect=mock_400) as mock_rest:
+                result = gd.attempt_model_generation("mock-key", "gemini-3.8-flash", "test-prompt", max_retries=3)
+                self.assertIsNone(result)
+                mock_rest.assert_not_called()
+
     def test_validate_dispatch_completeness_success(self):
         """Verify that a dispatch with all 10 sections passes completeness check."""
         full_content = """# ⚡ 2026-10-15 - Dispatch #40: Test Blueprint

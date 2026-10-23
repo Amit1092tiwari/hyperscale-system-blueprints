@@ -11,10 +11,24 @@ import re
 import json
 import time
 import datetime
+import socket
+import concurrent.futures
 from pathlib import Path
 import urllib.request
 import urllib.error
 from typing import List, Dict, Optional, Tuple
+
+# Configure global socket timeout to prevent indefinite hangs on network reads/connects
+socket.setdefaulttimeout(30.0)
+
+# Configure line buffering on stdout/stderr so logs flush immediately to CI consoles
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(line_buffering=True)
+except Exception:
+    pass
 
 # Resolve repository directories deterministically
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -262,12 +276,30 @@ CRITICAL COMPLETENESS INVARIANT:
 You MUST emit all 10 sections completely in order. Ensure all markdown code fences (```) are cleanly closed. Do NOT truncate, abbreviate, or omit Sections 8, 9, or 10.
 """
 
-def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str) -> str:
-    """Attempt generation via official google-genai SDK."""
+def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str, timeout_sec: float = 30.0) -> str:
+    """Attempt generation via official google-genai SDK with strict timeout protection."""
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=api_key)
+    timeout_ms = int(timeout_sec * 1000)
+    http_opts = None
+    if hasattr(types, "HttpOptions"):
+        try:
+            http_opts = types.HttpOptions(timeout=timeout_ms)
+        except Exception:
+            http_opts = {"timeout": timeout_ms}
+    else:
+        http_opts = {"timeout": timeout_ms}
+
+    client_kwargs = {"api_key": api_key}
+    if http_opts is not None:
+        try:
+            client = genai.Client(api_key=api_key, http_options=http_opts)
+        except Exception:
+            client = genai.Client(api_key=api_key)
+    else:
+        client = genai.Client(api_key=api_key)
+
     # Explicitly disable automatic function calling to prevent AFC warning on single-turn generation
     afc_config = (
         types.AutomaticFunctionCallingConfig(disable=True)
@@ -281,16 +313,22 @@ def generate_via_google_genai_sdk(api_key: str, model_name: str, prompt: str) ->
     if afc_config is not None:
         config_kwargs["automatic_function_calling"] = afc_config
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(**config_kwargs),
-    )
+    def _call_sdk():
+        return client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(**config_kwargs),
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_call_sdk)
+        response = future.result(timeout=timeout_sec + 5.0)
+
     if response and response.text:
         return response.text
     raise RuntimeError("Empty response received from google-genai SDK")
 
-def generate_via_rest_api(api_key: str, model_name: str, prompt: str) -> str:
+def generate_via_rest_api(api_key: str, model_name: str, prompt: str, timeout_sec: float = 25.0) -> str:
     """Generate via direct HTTPS REST API (zero third-party dependencies)."""
     clean_model = model_name.replace("models/", "")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={api_key}"
@@ -317,7 +355,7 @@ def generate_via_rest_api(api_key: str, model_name: str, prompt: str) -> str:
         method="POST"
     )
 
-    with urllib.request.urlopen(req, timeout=180) as resp:
+    with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
         body = json.loads(resp.read().decode("utf-8"))
         candidates = body.get("candidates", [])
         if not candidates:
@@ -454,55 +492,71 @@ def resolve_model_name(requested_model: str) -> str:
         return requested_model
     return "gemini-3.8-flash"
 
-def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_retries: int = 4) -> Optional[str]:
+def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_retries: int = 2) -> Optional[str]:
     """
     Attempt generation with exponential backoff on transient errors (503, 429, 500, network timeouts).
-    Aborts immediately on non-existent models (404).
-    Tries SDK first, then REST API.
+    Aborts immediately on non-existent models (404) or non-retryable client/auth errors (400, 401, 403).
+    Tries SDK first with bounded timeout, then REST API.
     """
-    backoff_delays = [2, 5, 10, 15]
+    backoff_delays = [2, 4]
 
     for attempt in range(1, max_retries + 1):
         backoff_sec = backoff_delays[min(attempt - 1, len(backoff_delays) - 1)]
 
         # 1. Attempt via official google-genai SDK
         try:
-            return generate_via_google_genai_sdk(api_key, model_name, prompt)
+            return generate_via_google_genai_sdk(api_key, model_name, prompt, timeout_sec=25.0)
         except ImportError:
             pass  # Fall through to REST API
+        except (concurrent.futures.TimeoutError, TimeoutError) as te:
+            print(f"[WARNING] SDK generation timed out (25s) on '{model_name}'. Trying direct REST API...", file=sys.stderr, flush=True)
         except Exception as e:
             err_str = str(e)
             is_not_found = "404" in err_str or "NOT_FOUND" in err_str
             if is_not_found:
-                print(f"[WARNING] SDK model '{model_name}' not found (404). Aborting retries.", file=sys.stderr)
+                print(f"[WARNING] SDK model '{model_name}' not found (404). Aborting retries.", file=sys.stderr, flush=True)
                 return None
-            is_transient = any(c in err_str for c in ["503", "429", "500", "502", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand"])
+            is_non_retryable = any(c in err_str for c in ["400", "401", "403", "API_KEY_INVALID", "INVALID_ARGUMENT", "PERMISSION_DENIED"])
+            if is_non_retryable:
+                print(f"[WARNING] SDK non-retryable auth/client error ({err_str}). Aborting retries for '{model_name}'.", file=sys.stderr, flush=True)
+                return None
+            is_transient = any(c in err_str for c in ["503", "429", "500", "502", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand", "timed out", "Timeout"])
             if is_transient and attempt < max_retries:
-                print(f"[WARNING] SDK '{model_name}' transient error ({err_str}). Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
+                print(f"[WARNING] SDK '{model_name}' transient error ({err_str}). Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr, flush=True)
                 time.sleep(backoff_sec)
                 continue
-            print(f"[WARNING] SDK generation failed on '{model_name}': {e}. Trying direct REST API...", file=sys.stderr)
+            print(f"[WARNING] SDK generation failed on '{model_name}': {e}. Trying direct REST API...", file=sys.stderr, flush=True)
 
         # 2. Attempt via direct REST API
         try:
-            return generate_via_rest_api(api_key, model_name, prompt)
+            return generate_via_rest_api(api_key, model_name, prompt, timeout_sec=25.0)
         except urllib.error.HTTPError as he:
             if he.code == 404:
-                print(f"[WARNING] REST API model '{model_name}' not found (404). Aborting retries.", file=sys.stderr)
+                print(f"[WARNING] REST API model '{model_name}' not found (404). Aborting retries.", file=sys.stderr, flush=True)
+                return None
+            if he.code in [400, 401, 403]:
+                print(f"[WARNING] REST API non-retryable error HTTP {he.code} on '{model_name}'. Aborting retries.", file=sys.stderr, flush=True)
                 return None
             is_transient = he.code in [503, 429, 500, 502, 504]
             if is_transient and attempt < max_retries:
-                print(f"[WARNING] REST API '{model_name}' HTTP {he.code}. Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr)
+                print(f"[WARNING] REST API '{model_name}' HTTP {he.code}. Retrying in {backoff_sec}s (attempt {attempt}/{max_retries})...", file=sys.stderr, flush=True)
                 time.sleep(backoff_sec)
                 continue
-            print(f"[WARNING] REST API encountered HTTP {he.code} on '{model_name}'.", file=sys.stderr)
+            print(f"[WARNING] REST API encountered HTTP {he.code} on '{model_name}'.", file=sys.stderr, flush=True)
+            break
+        except (TimeoutError, urllib.error.URLError) as te:
+            if attempt < max_retries:
+                print(f"[WARNING] REST API network/timeout on '{model_name}': {te}. Retrying in {backoff_sec}s...", file=sys.stderr, flush=True)
+                time.sleep(backoff_sec)
+                continue
+            print(f"[WARNING] REST API timeout exceeded on '{model_name}': {te}", file=sys.stderr, flush=True)
             break
         except Exception as e:
             if attempt < max_retries:
-                print(f"[WARNING] REST API '{model_name}' encountered: {e}. Retrying in {backoff_sec}s...", file=sys.stderr)
+                print(f"[WARNING] REST API '{model_name}' encountered: {e}. Retrying in {backoff_sec}s...", file=sys.stderr, flush=True)
                 time.sleep(backoff_sec)
                 continue
-            print(f"[WARNING] REST API error on '{model_name}': {e}", file=sys.stderr)
+            print(f"[WARNING] REST API error on '{model_name}': {e}", file=sys.stderr, flush=True)
             break
 
     return None
@@ -510,8 +564,11 @@ def attempt_model_generation(api_key: str, model_name: str, prompt: str, max_ret
 def generate_content_with_resilience(api_key: str, requested_model: str, prompt: str) -> Optional[str]:
     """
     Execute generation with multi-model fallback cascade.
-    Cascades strictly across active Gemini models (gemini-3.8-flash, gemini-3.1-pro-preview).
+    Cascades strictly across active Gemini models with a strict cumulative deadline.
     """
+    start_time = time.monotonic()
+    MAX_CUMULATIVE_API_BUDGET_SEC = 50.0
+
     primary = resolve_model_name(requested_model)
     fallback_chain = [
         primary,
@@ -525,17 +582,22 @@ def generate_content_with_resilience(api_key: str, requested_model: str, prompt:
             candidate_models.append(m)
 
     for idx, model in enumerate(candidate_models, start=1):
-        print(f"\n[INFO] [{idx}/{len(candidate_models)}] Initiating generation via model: {model}...")
+        elapsed = time.monotonic() - start_time
+        if elapsed >= MAX_CUMULATIVE_API_BUDGET_SEC:
+            print(f"\n[NOTICE] Cumulative API budget ({MAX_CUMULATIVE_API_BUDGET_SEC}s) reached after {elapsed:.1f}s. Falling back to deterministic catalog...", flush=True)
+            break
+
+        print(f"\n[INFO] [{idx}/{len(candidate_models)}] Initiating generation via model: {model}...", flush=True)
         result = attempt_model_generation(api_key, model, prompt)
         if result and result.strip():
             # Validate completeness before declaring success
             is_complete, missing_sections = validate_dispatch_completeness(result)
             if is_complete:
-                print(f"[SUCCESS] Content cleanly generated via model: {model} (All 10 sections verified)")
+                print(f"[SUCCESS] Content cleanly generated via model: {model} (All 10 sections verified)", flush=True)
                 return result
-            print(f"[WARNING] Model '{model}' output incomplete: Missing {missing_sections}. Cascading to next candidate model...", file=sys.stderr)
+            print(f"[WARNING] Model '{model}' output incomplete: Missing {missing_sections}. Cascading to next candidate model...", file=sys.stderr, flush=True)
         else:
-            print(f"[INFO] Model '{model}' unavailable or high demand. Cascading to next candidate model...")
+            print(f"[INFO] Model '{model}' unavailable or high demand. Cascading to next candidate model...", flush=True)
 
     return None
 

@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# Force unbuffered Python stdout/stderr for real-time CI monitoring
+export PYTHONUNBUFFERED=1
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -23,4 +26,4 @@ else
     exit 1
 fi
 
-"${PYTHON_CMD}" "${SCRIPT_DIR}/generate_dispatch.py"
+"${PYTHON_CMD}" -u "${SCRIPT_DIR}/generate_dispatch.py"
