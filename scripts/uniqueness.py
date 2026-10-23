@@ -97,7 +97,8 @@ STOP_WORDS = {
 TITLE_STOP_WORDS = {
     "for", "architecture", "tier", "adaptive", "series", "day", "iteration",
     "epoch", "phase", "dispatch", "pillar", "and", "the", "with", "from",
-    "mesh", "engine", "fabric", "core", "sieve"
+    "mesh", "engine", "fabric", "core", "sieve", "subsystem", "throughput",
+    "final", "high", "guaranteed"
 }
 
 def extract_tokens(text: str) -> Set[str]:
